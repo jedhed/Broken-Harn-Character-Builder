@@ -239,7 +239,7 @@ td b{font:700 17.5px var(--head)}
         <div class="eyebrow" id="eyebrow">Character roll · 720 TR</div>
         <input id="name" aria-label="Character name" placeholder="Name your character">
         <div id="savenote" class="savenote" role="status"></div>
-        <div class="dlrow"><button class="btn" type="button" data-act="dl">Download .md</button><span id="dlnote" class="hint" role="status"></span></div>
+        <div class="dlrow"><button class="btn" type="button" data-act="dl">Download .md</button><button class="btn" type="button" id="pdfbtn" data-act="pdf">Download PDF</button><span id="dlnote" class="hint" role="status"></span></div>
       </div>
       <div id="sheet" style="display:flex;flex-direction:column;gap:14px"></div>
     </aside>
@@ -1061,6 +1061,72 @@ let DL=null;try{if(window.claude&&window.claude.use)window.claude.use('downloads
 function download(id){const r=mdFor(id);if(!r)return;const fn=fileName(r.name);const say=m=>{const n=$('#dlnote');if(n)n.textContent=m};
  if(DL){DL.save({filename:fn,data:r.md}).then(()=>say('Downloaded '+fn)).catch(e=>{if(!e||e.code!=='declined')say('The download did not go through. Try again.')});return}
  try{const u=URL.createObjectURL(new Blob([r.md],{type:'text/markdown;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);say('Downloaded '+fn)}catch(e){say('The download did not go through. Try again.')}}
+const PDFLIB_URL='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',SHEET_URL='tbe-sheet.pdf';let pdfLibP=null,sheetP=null;
+function loadPdfLib(){if(window.PDFLib)return Promise.resolve(window.PDFLib);if(!pdfLibP)pdfLibP=new Promise((ok,no)=>{const s=document.createElement('script');s.src=PDFLIB_URL;s.onload=()=>window.PDFLib?ok(window.PDFLib):no(new Error('pdf-lib'));s.onerror=()=>no(new Error('pdf-lib'));document.head.appendChild(s)}).catch(e=>{pdfLibP=null;throw e});return pdfLibP}
+function loadSheet(){if(!sheetP)sheetP=fetch(SHEET_URL).then(r=>{if(!r.ok)throw new Error('sheet');return r.arrayBuffer()}).catch(e=>{sheetP=null;throw e});return sheetP}
+const PDFSK={'Dodge':['dodge','Savvy1_1'],'Melee: Light':['melee_light','Savvy1_2'],'Melee: Medium':['melee_medium','Savvy1_3'],'Melee: Heavy':['melee_heavy','Savvy1_4'],'Might':['might','Savvy1_5'],'Missile':['missile','Savvy1_6'],'Thrown':['thrown','Savvy1_7'],
+ 'Athletics':['athletics','Savvy2_1'],'Endurance':['endurance','Savvy2_2'],'Locks & Traps':['locks_traps','Savvy2_3'],'Perception':['perception','Savvy2_4'],'Ride':['ride','Savvy2_5'],'Sail/Boat':['sail_boat','Savvy2_6'],'Sleight of Hand':['sleight_of_hand','Savvy2_7'],'Stealth':['stealth','Savvy2_8'],'Survival':['survival','Savvy2_9'],'Track':['track','Savvy2_10'],'Willpower':['willpower','Savvy2_11'],
+ 'Deceive':['deceive','Savvy3_1'],'Insight':['insight','Savvy3_2'],'Inspire':['inspire','Savvy3_3'],'Intimidate':['intimidate','Savvy3_4'],'Perform':['perform','Savvy3_5'],'Persuade':['persuade','Savvy3_6'],'Protocol':['protocol','Savvy3_7'],'Seduce':['seduce','Savvy3_8'],'Wit':['wit','Savvy3_9'],
+ 'Ancient Lore':['ancient_lore','Savvy4_1'],'Arcana':['arcana','Savvy4_2'],'Commerce':['commerce','Savvy4_3'],'Common Lore':['common_lore','Savvy4_4'],'Craft: Practical':['craft_practical','Savvy4_5'],'Craft: Artistic':['craft_art','Savvy4_6'],'Divinity':['divinity','Savvy4_7'],'Heal':['heal','Savvy4_8'],'Naturewise':['naturewise','Savvy4_9'],'Streetwise':['streetwise','Savvy4_10'],
+ 'Bind: Change':['change','Savvy5_1'],'Bind: Conjure':['conjure','Savvy5_2'],'Bind: Control':['control','Savvy5_3'],'Bind: Destroy':['destroy','Savvy5_4'],'Bind: Witness':['witness','Savvy5_5']};
+const PDFSTR={Air:'air',Beasts:'beast',Body:'body',Earth:'earth',Fire:'fire',Plants:'plant',Spheres:'spheres',Spirit:'spirit',Thought:'thought',Water:'water'};
+const PDFLOC={Head:'head',Body:'body',LArm:'left_arm',RArm:'right_arm',LLeg:'left_leg',RLeg:'right_leg'};
+const PDFPEN={Athletics:'athletics','Rise from Prone':'rise_from_prone',Stealth:'stealth',Dodge:'dodge',Perception:'perception'};
+// Works out what goes in each field of the TBE sheet. Text in V, ticked boxes in B, "S"/"T" button captions in CAP, overflow lines in N.
+function pdfData(name){const V={},B=[],CAP={},N=[];const c=culture();const {led,ex}=ledger();const A=attrs();const G=gearCalc();const t=tongues();
+ const set=(k,v)=>{if(v!==''&&v!==null&&v!==undefined)V[k]=String(v)};const tot=k=>(led[k]||[]).reduce((a,q)=>a+q[0],0);
+ set('name',name);set('page2_name',name);set('race',S.folk);set('sex',S.sex);if(ageSettled())set('age',ageYears());
+ if(S.nation)set('culture',(S.nation==='tribal'?(S.place||'Tribal'):NAT[S.nation].name)+(c&&c!==NAT[S.nation].name?' ('+c+')':''));
+ if(S.career){const cl=unesc(careerLine());set('previous_career',cl.length<=34?cl:S.career==='Spellweaver'?'Spellweaver'+(S.occ2&&S.occ2!=='Unaffiliated'?' ('+S.occ2+')':''):S.career==='Godbound'&&S.deity?'Godbound of '+S.deity:S.career)}
+ S.abil.slice(0,3).forEach((a,i)=>set('ability_score_descriptor_'+(i+1),a.name+(a.desc?' ('+a.desc+')':'')));
+ S.traits.forEach((x,i)=>i<3?set('personality_trait_'+(i+1),x):N.push('Trait: '+x));
+ const mag=cdef()&&cdef().magic;
+ Object.entries(PDFSK).forEach(([k,[f,sv]])=>{const isB=k.startsWith('Bind');if(isB&&!mag&&!led[k])return;set(f+'_pct',Math.max(0,Math.min(70,tot(k))));if(ex[k])set(f+'_ex',isB?ex[k]+1:Math.min(4,ex[k]+1));if(S.ro.savvy.includes(k))CAP[sv]='S'});
+ STRANDS.forEach((x,i)=>{const k='Strand: '+x;const thin=mag&&S.sw.thin.includes(x);if(led[k]||thin)set(PDFSTR[x]+'_level',Math.min(99,tot(k)));if(thin)CAP['Thin_'+(i+1)]='T'});
+ if(led.Piety)set('starting_piety_level',Math.min(90,tot("Piety")));
+ const LF=[['Language_1_name','language_pct','language_ex'],['Language_2_name','language2_pct','language2_ex'],['Language_3_name','language3_pct','language3_ex']];
+ t.L.forEach((l,i)=>{if(i<3){set(LF[i][0],l[0]);set(LF[i][1],l[1])}else N.push('Tongue: '+l[0]+' '+l[1])});
+ const WF=[['lore_wise_name','lore_wise_custom_pct'],['bind_wise_1_name','bind_wise_1_pct'],['bind_wise_2_name','bind_wise_2_pct']];
+ t.W.forEach((w,i)=>{if(i<3){set(WF[i][0],w[0].replace(/-wise$/i,''));set(WF[i][1],w[1])}else N.push('Lore: '+w[0]+' '+w[1])});
+ set('max_resolve',A.res.val);set('initiative',A.init.val+G.pen);set('init_penalty',G.pen);set('total_initiative',A.init.val);set('toughness',A.tough.val);set('death_threshold',A.dt.val);set('lethality_level',A.ll.val);
+ Object.entries(talentSlots().reduce((m,[id,tn])=>{const k=tn+(subOf(id,tn)?': '+subOf(id,tn):'');m[k]=(m[k]||0)+1;return m},{})).map(([k,n])=>k+(n>1?' ×'+n:'')).forEach((x,i)=>i<10?set('talent_'+(i+1),x):N.push('Talent: '+x));
+ G.pieces.forEach(x=>{const f=PDFLOC[x.k];set(f+'_armor',x.a[0]);set(f+'_ap',x.a[2]);set(f+'_bulk',x.a[3])});
+ Object.entries(G.pn).forEach(([k,v])=>{if(PDFPEN[k])set('armor_penalty_'+PDFPEN[k],'-'+v)});
+ if(G.shield){set('shield_size',G.shield[0]);set('shield_ap',G.shield[3].replace(/\s*AP$/,''));set('shield_enc',G.shield[4])}
+ const wl=[{n:'Dagger',hand:true},...S.gear.items.filter(x=>WMAP[x.n][1]!=='Shield')];
+ wl.forEach((x,i)=>{const w=WMAP[x.n];const note=[w[5],x.hand?'':'packed'].filter(Boolean).join(', ');if(i<4){const p='weapon_'+(i+1)+'_';set(p+'name_type',w[0]+' ('+w[1]+')');set(p+'att',skillVal(w[1]));set(p+'dmg',w[3]);set(p+'enc',w[4]);set(p+'notes',note)}else N.push('Weapon: '+w[0]+', '+w[1]+' '+skillVal(w[1])+', damage '+w[3]+', ENC '+w[4]+(note?', '+note:''))});
+ LIFET.forEach(([k])=>{const l=S.life[k];if(!l)return;const e=lifeEv(k);set('life_'+k+'_1',[e.name,unesc(e.text),l.pick?'Gained: '+unesc(grantLabel(l.pick))+'.':'',l.rel?'Someone from this event: a '+l.rel.toLowerCase()+'.':''].filter(Boolean).join('\n'))});
+ const gl=[...S.goals.filter(g=>g.kind==='individual'),...S.goals.filter(g=>g.kind!=='individual')];
+ gl.forEach((g,i)=>{if(i<12){const f='goal_'+(i<6?'left_':'right_')+(i%6+1);set(f,g.text);if(g.kind!=='individual')B.push(f+'_shared')}else N.push('Goal'+(g.kind!=='individual'?' (shared)':'')+': '+g.text)});
+ ['gear','ammo','rations','medical'].forEach(k=>set('supply_'+k,'d12'));
+ if(S.gear.coin!==null)set('silver_pieces',G.left);if(S.cls)set('status',statusVal());
+ const npc=[...LIFET.filter(([k])=>S.life[k]&&S.life[k].rel).map(([k])=>S.life[k].rel+' (from '+lifeEv(k).name+')'),...(S.allies||[])];
+ npc.forEach((x,i)=>i<5?set('relationship_npc_'+(i+1),x):N.push('NPC: '+x));
+ set('inventory_max_enc',A.inv.val);
+ const inv=[...S.gear.items.filter(x=>!x.hand).map(x=>[x.n,WMAP[x.n][4]]),...S.gear.misc.map(n=>[n,MISC.find(m=>m[0]===n)[2]])];
+ inv.forEach(([n,e],i)=>{if(i<10){set('inventory_'+(i+1),n);set('inventory_'+(i+1)+'_enc',e)}else N.push('Item: '+n+', ENC '+e)});
+ return{V,B,CAP,N}}
+async function makePdf(name){const[L,buf]=await Promise.all([loadPdfLib(),loadSheet()]);const doc=await L.PDFDocument.load(buf);const form=doc.getForm();
+ const F={TiBo:await doc.embedFont(L.StandardFonts.TimesRomanBold),TiRo:await doc.embedFont(L.StandardFonts.TimesRoman),Helv:await doc.embedFont(L.StandardFonts.Helvetica)};
+ const D=pdfData(name);const lost=[];
+ const safe=(txt,font)=>{const ok=new Set(font.getCharacterSet());return[...String(txt).replace(/−/g,'-').replace(/[‘’]/g,"'").replace(/[“”]/g,'"')].map(ch=>ch==='\n'||ok.has(ch.codePointAt(0))?ch:(ch.normalize('NFD')[0]&&ok.has(ch.normalize('NFD').codePointAt(0))?ch.normalize('NFD')[0]:'?')).join('')};
+ const fontOf=f=>{const da=daOf(f);return/TiRo/.test(da)?F.TiRo:/Helv/.test(da)?F.Helv:F.TiBo};
+ const notes=[];for(let i=1;i<=13;i++)notes.push('note_'+i);
+ const NW=form.getTextField('note_1').acroField.getWidgets()[0].getRectangle().width-4;const wrap=x=>{const out=[];let ln='';safe(x,F.TiBo).split(' ').forEach(wd=>{const tr=ln?ln+' '+wd:wd;if(ln&&F.TiBo.widthOfTextAtSize(tr,9)>NW){out.push(ln);ln='   '+wd}else ln=tr});if(ln)out.push(ln);return out};
+ const nextNote=()=>notes.find(k=>!D.V[k]);D.N.forEach(x=>{const ls=wrap(x);if(notes.filter(k=>!D.V[k]).length<ls.length){lost.push(x);return}ls.forEach(l=>{D.V[nextNote()]=l})});
+ const daOf=f=>{const w=f.acroField.getWidgets()[0];return(w&&w.getDefaultAppearance&&w.getDefaultAppearance())||f.acroField.getDefaultAppearance()||''};
+ // A few fields on the sheet are set to plain black text; they borrow the look of the row beside them so the filled sheet matches.
+ const DASIB=k=>k==='language_pct'?'language2_pct':k==='language_ex'?'language2_ex':k==='bind_wise_1_name'?'bind_wise_2_name':k==='thrown_pct'?'missile_pct':/^weapon_3_/.test(k)?k.replace('weapon_3_','weapon_2_'):/^left_leg_/.test(k)?k.replace('left_leg_','right_leg_'):'';
+ Object.entries(D.V).forEach(([k,v])=>{let f;try{f=form.getTextField(k)}catch(e){return}if(DASIB(k)){try{const da=daOf(form.getTextField(DASIB(k)));const sib=form.getTextField(DASIB(k));if(da){f.acroField.setDefaultAppearance(da);f.acroField.getWidgets().forEach(w=>w.setDefaultAppearance(da))}f.setAlignment(sib.getAlignment())}catch(e){}}const font=fontOf(f);f.setText(safe(v,font));if(/^life_/.test(k))f.setFontSize(10);if(/^note_/.test(k))f.setFontSize(9);f.updateAppearances(font)});
+ D.B.forEach(k=>{try{const cb=form.getCheckBox(k);cb.check();cb.defaultUpdateAppearances()}catch(e){}});
+ Object.entries(D.CAP).forEach(([k,cap])=>{try{const b=form.getButton(k);b.acroField.getWidgets().forEach(w=>{w.dict.delete(L.PDFName.of('BS'));w.getOrCreateAppearanceCharacteristics().setCaptions({normal:cap})});b.updateAppearances(F.TiBo)}catch(e){}});
+ return{bytes:await doc.save({updateFieldAppearances:false}),lost}}
+async function downloadPdf(){const nm=$('#name').value;const fn=fileName(nm).replace(/\.md$/,'.pdf');const say=m=>{const n=$('#dlnote');if(n)n.textContent=m};const btn=$('#pdfbtn');if(btn)btn.disabled=true;say('Preparing PDF…');
+ let r;try{r=await makePdf(nm)}catch(e){say('The PDF could not be made. Check your connection and try again.');if(btn)btn.disabled=false;return}
+ const done=()=>say('Downloaded '+fn+(r.lost.length?'. '+r.lost.length+(r.lost.length===1?' entry':' entries')+' did not fit in Notes and were left off: '+r.lost.join('; ')+'.':''));
+ try{if(DL){await DL.save({filename:fn,data:r.bytes});done()}else{const u=URL.createObjectURL(new Blob([r.bytes],{type:'application/pdf'}));const a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);done()}}
+ catch(e){say(e&&e.code==='declined'?'':'The download did not go through. Try again.')}
+ if(btn)btn.disabled=false}
 let loadMsg=null;
 const clean=x=>typeof x==='string'?x.replace(/[<>]/g,''):Array.isArray(x)?x.map(clean):x&&typeof x==='object'?Object.fromEntries(Object.entries(x).map(([k,v])=>[clean(k),clean(v)])):x;
 function readCharFile(text){const m=/<!--\s*broken-harn-data v(\d+)[^\n]*\n(?:[^\n]*\n)?([A-Za-z0-9+\/=\s]+?)-->/.exec(text);if(!m)return{err:'That file has no Broken Hârn character data in it. Choose a file downloaded from this app.'};
@@ -1079,6 +1145,7 @@ function render(){syncGM();const st=VIEW==='start';$('#start').hidden=!st;$('#st
 /* ---------- events ---------- */
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.val;
  if(a==='dl'){download(v||CUR);return}
+ if(a==='pdf'){downloadPdf();return}
  if(a==='pickfile'){const f=$('#filein');f.value='';f.click();return}
  if(a==='finish'){const I=issues();saveNow();finMsg={id:CUR,name:$('#name').value.trim()||'Your character',todo:ORDER.filter(i=>!done(i)||(I[i]||[]).length).map(i=>STEPS[i])};VIEW='start';pendingDel=null;loadMsg=null;render();window.scrollTo(0,0);return}
  if(a==='chars'){finMsg=null;VIEW='start';pendingDel=null;loadMsg=null;render();window.scrollTo(0,0);return}
