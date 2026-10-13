@@ -163,6 +163,7 @@ details.calls ol{color:var(--muted);max-width:75ch;padding-left:22px}
 .seg{display:inline-flex;border:1px solid var(--ink);border-radius:3px;overflow:hidden}
 .seg button{font:600 15.5px var(--head);border:0;background:var(--card);color:var(--ink);padding:3px 12px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--primary);color:var(--onp)}
+.portwrap{width:150px;padding:4px;border:1px solid var(--ink);background:var(--card);box-shadow:3px 3px 0 var(--hair)}.portwrap img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}.portwrap.side{margin:6px 0 4px}.portrow{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}textarea.text{resize:vertical;font:inherit;line-height:1.4;min-height:4.5em}textarea.tall{min-height:9em}
 .formal{font:italic 500 15.5px var(--head);color:var(--muted);margin-top:2px}
 .savenote{font-size:13px;font-weight:600;color:var(--ok-t);min-height:1.2em}.savenote.bad{color:var(--bad-t)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -242,6 +243,7 @@ td b{font:700 17.5px var(--head)}
         <div class="eyebrow" id="eyebrow">Character roll · 720 TR</div>
         <input id="name" aria-label="Character name" placeholder="Name your character">
         <div id="formal" class="formal" hidden></div>
+        <div id="portwrap" class="portwrap side" hidden><img id="portimg" alt="Character portrait"></div>
         <div class="dlrow" id="namerow"><button class="btn roll" type="button" data-act="rollname">Roll a name</button></div>
         <div id="savenote" class="savenote" role="status"></div>
         <div class="dlrow"><button class="btn" type="button" data-act="dl">Download .md</button><button class="btn" type="button" id="pdfbtn" data-act="pdf">Download PDF</button><span id="dlnote" class="hint" role="status"></span></div>
@@ -693,6 +695,57 @@ function goalText(){const f=id=>{const el=$('#'+id);return el?el.value.trim().re
 function goalCnt(){const n=S.goals.length,me=S.goals.filter(g=>g.kind==='individual').length,sh=n-me;const ok=n>=3&&n<=5&&me>=1&&sh>=1;const txt=n+(n===1?' goal':' goals');
  const msg=!me?(n?txt+' · write a personal goal':'Write a personal goal'):n<3?txt+' · aim for 3 to 5':n>=6?txt:!sh?txt+' · add a shared one':txt;
  return`<span class="chips" style="align-items:center">${n?`<span class="hint">${me} personal · ${sh} shared</span>`:''}<span class="cnt ${ok?'ok':'warn'}">${msg}</span></span>`}
+/* ---------- portrait and image prompt ---------- */
+/* The house art style for portrait prompts. Edit these two to change every prompt the builder writes. */
+const ART_LEAD='Ink-and-watercolor fantasy character portrait with varied ink outlines, translucent earthy washes and a scratchy, textured surface.';
+const ART_STYLE='Hand-drawn fantasy character portrait in a traditional ink-and-watercolor illustration style. Naturalistic anatomy and facial proportions with subtle storybook stylization. Expressive dark ink contours with varied line weight, fine interior sketch lines, and loose hatching following the forms. Translucent watercolor washes layered with dry-brush and colored-pencil-like texture; visible pigment grain, irregular strokes, and softly mottled color. A restrained, earthy palette with muted colors, warm undertones, and subtle rosy accents. Soft, diffuse lighting, gently modeled shadows, and small, selectively placed highlights. Tactile rendering of skin, hair, fabric, leather, and metal, with detail concentrated around the face. An illustrative, handmade finish with crisp outlines and softly painted interiors. An isolated figure against a clean white background, with a readable silhouette and no scenery.';
+const ART_NEG='Photorealism, 3D rendering, glossy digital airbrushing, plastic skin, anime proportions, oversized eyes, flat vector fills, perfectly uniform outlines, neon colors, dramatic cinematic lighting, excessive bloom, elaborate background.';
+/* What an image generator can use: things that show in a picture, plus a hint of temperament. Hârn names mean nothing to it, so peoples are described by look and dress. */
+function lookOf(){const c=culture();const p=S.nation==='orbaal'?S.people:'';const jarin=p==='Jarin'||(S.nation==='tribal'&&S.place&&!TRIBE_HARNIC.includes(S.place));
+ if(S.folk==='Khuzdul')return'a dwarf, short, stocky and broad-shouldered'+(S.sex==='Female'?'':', with a long braided beard');
+ if(S.folk==='Sindarin')return'an elf, tall and slender, with ageless features and pointed ears';
+ if(c==='Viking'&&p!=='Jarin')return'Norse, in Viking-age dress';
+ if(jarin)return'Celtic-looking, in Celtic-influenced dress';
+ if(c==='Tribal')return'in tribal dress of wool, hide and fur';
+ if(c==='Imperial')return'in dress influenced by the late Roman empire';
+ if(c==='Feudal')return'in the dress of 12th-century northern Europe';return''}
+const CLOTHES={slave:'plain, rough-spun clothing',serf:'plain peasant clothing',unguilded:'simple, practical clothing',guilded:'good, sturdy clothing of a prosperous tradesperson',noble:'fine clothing that marks high birth'};
+function armorText(){const by={};LOC.forEach(([k])=>{const a=S.gear.armor[k];if(a)(by[a]=by[a]||[]).push(k)});
+ const where=ks=>{const w=[];if(ks.includes('Head'))w.push('head');if(ks.includes('Body'))w.push('body');const arms=['LArm','RArm'].filter(k=>ks.includes(k)).length,legs=['LLeg','RLeg'].filter(k=>ks.includes(k)).length;if(arms)w.push(arms===2?'arms':'one arm');if(legs)w.push(legs===2?'legs':'one leg');return w.length>1?w.slice(0,-1).join(', ')+' and '+w[w.length-1]:w[0]};
+ return Object.entries(by).map(([a,ks])=>a.toLowerCase()+' armour on the '+where(ks)).join(', ')}
+function promptText(){const man=S.sex==='Female'?'woman':S.sex==='Male'?'man':'person';const age=ageSettled()?ageYears():'';
+ const who=[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf()].filter(Boolean).join(', ');
+ const bits=[];if(S.cls)bits.push('wearing '+CLOTHES[S.cls]);const ar=armorText();if(ar)bits.push(ar);
+ const held=[...new Set(S.gear.items.filter(x=>x.hand).map(x=>x.n.toLowerCase()))].map(w=>(/^[aeiou]/.test(w)?'an ':'a ')+w);if(held.length)bits.push('carrying '+(held.length>1?held.slice(0,-1).join(', ')+' and '+held[held.length-1]:held[0]));
+ const L=['Half-length portrait, waist up, in a vertical 3:4 frame, of '+who+'.'];
+ if(S.career)L.push('By calling: '+unesc(careerLine())+'.');if(S.occ)L.push('Family trade: '+S.occ.toLowerCase()+'.');
+ if(bits.length)L.push(bits.join('; ').replace(/^./,m=>m.toUpperCase())+'.');if(S.concept)L.push('Concept: '+S.concept.replace(/\.?$/,'.'));
+ if(S.traits.length)L.push('Expression and bearing: '+S.traits.map(t=>t.toLowerCase()).join(', ')+'.');
+ return ART_LEAD+' '+L.join(' ')+' '+ART_STYLE}
+const promptPos=()=>S.prompt&&S.prompt.pos||promptText();const promptNeg=()=>S.prompt&&S.prompt.neg||ART_NEG;
+const promptMj=()=>promptPos().replace(/\s+/g,' ').trim()+' --ar 3:4 --no '+promptNeg().replace(/\.$/,'');
+/* A stored portrait must be a JPEG data URL the app made itself. Anything else is dropped. */
+const portOK=p=>typeof p==='string'&&p.length<1500000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(p);
+function showPortrait(){const w=$('#portwrap');if(!w)return;const ok=portOK(S.portrait);w.hidden=!ok;$('#portimg').src=ok?S.portrait:''}
+/* Crop to 3:4 (centred across, a little above centre down, to keep the head), shrink to 600 x 800 at most, and keep it as a JPEG. */
+function addPortrait(file){const note=m=>{const n=$('#portnote');if(n)n.textContent=m};if(!file)return;if(!/^image\//.test(file.type)){note('That file is not a picture. Choose a JPG or PNG.');return}
+ const url=URL.createObjectURL(file);const img=new Image();
+ img.onload=()=>{URL.revokeObjectURL(url);let sw=img.naturalWidth,sh=img.naturalHeight,sx=0,sy=0;if(sw/sh>3/4){const nw=sh*3/4;sx=(sw-nw)/2;sw=nw}else{const nh=sw*4/3;sy=(sh-nh)*0.15;sh=nh}
+  const W=Math.min(600,Math.round(sw)),H=Math.round(W*4/3);const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,W,H);cx.drawImage(img,sx,sy,sw,sh,0,0,W,H);
+  const d=cv.toDataURL('image/jpeg',0.85);if(!portOK(d)){note('That picture could not be used. Try another.');return}S.portrait=d;render();note('Portrait added.')};
+ img.onerror=()=>{URL.revokeObjectURL(url);note('This browser could not read that picture. Try a JPG or PNG.')};img.src=url}
+function copyText(t,msg){const n=$('#promptnote');const done=ok=>{if(n)n.textContent=ok?msg:'Copying was blocked. Select the text and copy it by hand.'};
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>done(true),()=>done(false));else done(false)}
+function portraitPanel(){const ok=portOK(S.portrait);const ed=S.prompt&&(S.prompt.pos||S.prompt.neg);
+ return`<div class="sub"><div class="lab"><span><b>Portrait</b> <span class="hint">optional. It shows in your character roll, and is saved with the character and in the downloaded file.</span></span></div>
+  <div class="field"><div class="lab"><span><b>Image prompt</b> <span class="hint">built from your character and the house art style, for whichever image tool you use</span></span></div>
+   <label for="ppos" class="hint">Prompt</label><textarea class="text tall" id="ppos" data-prompt="pos" rows="7">${esc(promptPos())}</textarea>
+   <label for="pneg" class="hint">Negative prompt <span class="hint">(things to avoid; some tools have a separate box for it)</span></label><textarea class="text" id="pneg" data-prompt="neg" rows="3">${esc(promptNeg())}</textarea>
+   <div class="chips"><button class="btn" data-act="pcopy" data-val="pos">Copy prompt</button><button class="btn" data-act="pcopy" data-val="neg">Copy negative prompt</button><button class="btn" data-act="pcopy" data-val="mj">Copy for Midjourney</button><button class="btn" data-act="preset">Rebuild from character</button></div>
+   <span class="hint" id="promptnote" role="status">${ed?'You have edited this prompt. It is kept as you wrote it; rebuild it to pick up later changes to the character.':'The prompt follows your character as it changes. Edit it freely: your version is kept. Copy for Midjourney puts both in one line with --ar 3:4 and --no.'}</span></div>
+  <div class="field"><div class="lab"><span><b>Your picture</b> <span class="hint">a JPG or PNG. It is cropped to 3:4 and shrunk to fit.</span></span></div>
+   <div class="portrow">${ok?`<div class="portwrap"><img src="${S.portrait}" alt="Your character's portrait"></div>`:''}<div class="chips"><label class="btn" for="portfile">${ok?'Replace picture':'Add a picture'}</label><input type="file" id="portfile" accept="image/jpeg,image/png,image/webp" hidden>${ok?'<button class="btn" data-act="portdel">Remove</button>':''}</div></div>
+   <span class="hint" id="portnote" role="status">Your picture stays in this browser and your own files. Nothing is uploaded anywhere.</span></div></div>`}
 function tgPanel(){const tr=S.traits,full=tr.length>=3;const sw=signWords();const desc=S.abil.map(a=>a.desc).filter(Boolean);
  const draw=[...LIFET.filter(([t])=>S.life[t]).map(([t])=>lifeEv(t).name+(S.life[t].rel?' (a '+S.life[t].rel.toLowerCase()+')':'')),...(S.allies||[]),S.parent,S.standing?S.standing+' in the clan':'',S.concept].filter(Boolean);
  return`<header><h2>Traits and goals</h2><p>How your character tends to behave, and what they are trying to do. Traits can change as the campaign unfolds. Goals are how you earn experience.</p></header>
@@ -716,7 +769,8 @@ function tgPanel(){const tr=S.traits,full=tr.length>=3;const sw=signWords();cons
    <div class="result gprev" id="gprev" hidden></div>
    <div class="chips"><button class="btn" data-act="goalbuild">Combine into a goal</button></div></div>
   ${draw.length?`<div class="result"><b>Things to draw on.</b> ${draw.map(esc).join(' · ')}</div>`:''}
-  <span class="hint">You can leave goals blank and find them in play.</span></div>`}
+  <span class="hint">You can leave goals blank and find them in play.</span></div>
+ ${portraitPanel()}`}
 
 /* name, skill, cost, damage, ENC, notes */
 const WEAP=[['Dagger','Melee: Light',20,'1',1,'Can be thrown'],['Parrying Dagger','Melee: Light',25,'1',1,'Defensive'],['Shortsword','Melee: Light',60,'2',1,''],['Cutlass','Melee: Light',60,'2',1,''],['Hand Axe','Melee: Light',30,'2',1,'Can be thrown'],['Cudgel','Melee: Light',10,'2 non-lethal',1,''],['Rapier','Melee: Light',100,'2',1,'Defensive'],['Javelin','Melee: Light',70,'2',2,'Piercing 1, can be thrown'],['Blackjack','Melee: Light',15,'1 non-lethal',1,''],['Whip','Melee: Light',25,'1',1,'Reach 1, cannot parry'],['Brass Knuckles','Might',20,'0',0,'Makes unarmed blows lethal'],
@@ -816,7 +870,7 @@ function showFormal(){const f=$('#formal');if(!f)return;const t=formalName();f.t
 function setFather(v){const old=patronymic();S.father=v;const nw=patronymic();const el=$('#name');if(old&&nw&&el.value.includes(old)){el.value=el.value.replace(old,nw)}}
 
 /* ---------- state ---------- */
-const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,ivc:'',chief:false,clanAuto:'',orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,occ2:'',cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
+const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,occ2:'',cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
 let S=blank();
 const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true};
 const AGE_R={Young:[20,29],Adult:[30,49],Old:[50,69]};
@@ -1101,9 +1155,10 @@ let CHARS=[],CUR=null,VIEW='start',pendingDel=null,finMsg=null;
 const newId=()=>'c'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);
 const strip=o=>JSON.stringify({...o,step:0});
 const summary=()=>({career:S.career?careerLine():'',born:S.place?(S.nation==='tribal'?'Among the '+esc(S.place):esc(S.place)+', '+NAT[S.nation].name):'',done:ORDER.filter(i=>done(i)&&!(issues()[i]||[]).length).length});
-function store(){try{localStorage.setItem(STOREKEY,JSON.stringify({v:2,list:CHARS,current:CUR,GM}));saveOK=true}catch(e){saveOK=false}}
+let saveFull=false;
+function store(){try{localStorage.setItem(STOREKEY,JSON.stringify({v:2,list:CHARS,current:CUR,GM}));saveOK=true;saveFull=false}catch(e){saveOK=false;saveFull=!!e&&(e.name==='QuotaExceededError'||e.code===22||e.name==='NS_ERROR_DOM_QUOTA_REACHED')}}
 function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e){const nm=$('#name').value;if(!e.S||strip(e.S)!==strip(S)||e.name!==nm)e.saved=Date.now();e.name=nm;e.S=JSON.parse(JSON.stringify(S));e.sum=summary()}}
- store();const n=$('#savenote');n.textContent=saveOK?'Saved in this browser':'Not saved: this browser is blocking storage';n.classList.toggle('bad',!saveOK)}
+ store();const n=$('#savenote');n.textContent=saveOK?'Saved in this browser':saveFull?'Not saved: this browser\'s storage is full. Remove a portrait, or download and delete old characters.':'Not saved: this browser is blocking storage';n.classList.toggle('bad',!saveOK)}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STOREKEY)||'null');if(d&&d.v===2&&Array.isArray(d.list)){CHARS=d.list.filter(c=>c&&c.id&&c.S&&typeof c.S==='object');CUR=CHARS.some(c=>c.id===d.current)?d.current:null;Object.assign(GM,d.GM||{});return}}catch(e){}
  try{const d=JSON.parse(localStorage.getItem(SAVEKEY)||'null');if(d&&d.v===1&&d.S&&typeof d.S==='object'){Object.assign(GM,d.GM||{});const id=newId();CHARS=[{id,name:d.name||'',S:d.S,saved:Date.now(),sum:null}];CUR=id}}catch(e){}}
 function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));if(!('orbLang' in e.S))S.orbLang='Ivinian';$('#name').value=e.name||'';CUR=id;VIEW='char';viewPhase=null;pendingDel=null;return true}
@@ -1236,14 +1291,14 @@ function readCharFile(text){const m=/<!--\s*broken-harn-data v(\d+)[^\n]*\n(?:[^
  if(m[1]!=='1')return{err:'That file was made by a newer version of this app and cannot be opened here.'};
  let d;try{const bin=atob(m[2].replace(/\s+/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);d=JSON.parse(new TextDecoder().decode(u))}catch(e){return{err:'The character data in that file is damaged and could not be read.'}}
  if(!d||typeof d.S!=='object'||!d.S||Array.isArray(d.S))return{err:'The character data in that file is damaged and could not be read.'};
- const c=clean(d);const st=Object.assign(blank(),c.S);if(!('orbLang' in c.S))st.orbLang='Ivinian';if(!ORDER.includes(st.step))st.step=ORDER[0];return{name:typeof c.name==='string'?c.name.slice(0,200):'',S:st,camp:c.camp}}
+ const c=clean(d);const st=Object.assign(blank(),c.S);if(!portOK(st.portrait))st.portrait='';if(!st.prompt||typeof st.prompt!=='object')st.prompt={pos:'',neg:''};if(!('orbLang' in c.S))st.orbLang='Ivinian';if(!ORDER.includes(st.step))st.step=ORDER[0];return{name:typeof c.name==='string'?c.name.slice(0,200):'',S:st,camp:c.camp}}
 function importChar(text){finMsg=null;const r=readCharFile(text);if(r.err){loadMsg=[false,r.err];render();return}
  const id=newId();CHARS.unshift({id,name:r.name,S:r.S,saved:Date.now(),sum:null});openChar(id);
  const cp=r.camp;loadMsg=null;render();if(cp&&(cp.d!==GM.d||cp.m!==GM.m||cp.y!==GM.y)){const n=$('#dlnote');if(n)n.textContent='This file was made for a campaign starting '+cp.d+' '+(MONTHS[cp.m-1]||'')+' '+yearTxt(cp.y)+'. Yours starts '+campTxt()+', so the birth year may differ.'}}
 function syncGM(){$('#eyebrow').textContent='Character roll · '+yearTxt(GM.y);const m=$('#camp-m');if(!m.options.length)m.innerHTML=MONTHS.map((n,i)=>`<option value="${i+1}">${n}</option>`).join('');const set=(el,v)=>{if(document.activeElement!==el)el.value=v};set($('#camp-d'),GM.d);set(m,GM.m);set($('#camp-y'),GM.y);$('#gm-sindarin').checked=!!GM.Sindarin;$('#gm-khuzdul').checked=!!GM.Khuzdul;$('#gm-accents').checked=GM.accents!==false}
 function render(){syncGM();const st=VIEW==='start';$('#start').hidden=!st;$('#steps').hidden=st;$('#cols').hidden=st;$('#lnk-chars').hidden=st;document.querySelector('.banner').classList.toggle('inchar',!st);
  if(st){$('#sect').textContent='Characters';store();startScreen();return}
- ageSettled();$('#sect').textContent=STEPS[S.step];steps();panel();sheet();showFormal();saveNow()}
+ ageSettled();$('#sect').textContent=STEPS[S.step];steps();panel();sheet();showFormal();showPortrait();saveNow()}
 
 /* ---------- events ---------- */
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.val;
@@ -1275,6 +1330,9 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='gmisc'){const m=S.gear.misc;if(m.includes(v))S.gear.misc=m.filter(x=>x!==v);else m.push(v)}
   else if(a==='tr'){if(S.traits.includes(v))S.traits=S.traits.filter(x=>x!==v);else if(S.traits.length<3)S.traits.push(v)}
   else if(a==='tradd'){const t=cap($('#trcustom').value.trim());if(t&&S.traits.length<3&&!S.traits.includes(t))S.traits.push(t)}
+  else if(a==='pcopy'){copyText(v==='mj'?promptMj():v==='neg'?promptNeg():promptPos(),v==='mj'?'Copied for Midjourney.':v==='neg'?'Negative prompt copied.':'Prompt copied.');return}
+  else if(a==='preset')S.prompt={pos:'',neg:''};
+  else if(a==='portdel')S.portrait='';
   else if(a==='goaladd'){const t=$('#goaltext').value.trim();if(t)S.goals.push({text:t,kind:'individual'})}
   else if(a==='goalbuild'){const t=goalText();if(t)S.goals.push({text:t,kind:'individual'})}
   else if(a==='goalkind'){const[i,k]=v.split('|');S.goals[+i].kind=k}
@@ -1318,6 +1376,8 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.years!==undefined){S.years=+el.value;S.ageSet=true;render();return}if(el.dataset.gm){GM[el.dataset.gm]=el.checked;if(!el.checked&&S.folk===el.dataset.gm)S.folk='Human';render();return}
  if(el.dataset.adesc!==undefined){S.abil[+el.dataset.adesc].desc=el.value.trim();render();return}
  if(el.dataset.patro){S.patro=el.checked;render();return}
+ if(el.dataset.prompt){const k=el.dataset.prompt;const gen=k==='pos'?promptText():ART_NEG;if(!S.prompt)S.prompt={pos:'',neg:''};S.prompt[k]=el.value.trim()===gen.trim()?'':el.value.trim();saveNow();const n=$('#promptnote');if(n)n.textContent=S.prompt.pos||S.prompt.neg?'Your edit is kept. Rebuild from character to start again from the character.':'';return}
+ if(el.id==='portfile'){addPortrait(el.files&&el.files[0]);el.value='';return}
  if(el.dataset.chief){setIvc('great',el.checked);render();return}
  if(el.dataset.byon){nameEdit(()=>{S.byOn=el.checked});render();return}
  if(el.dataset.byname){nameEdit(()=>{S.byname=el.value.trim()});render();return}
