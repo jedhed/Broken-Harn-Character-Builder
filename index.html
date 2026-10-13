@@ -527,7 +527,7 @@ const FAITH={
 const ROLES={lay:'Lay follower',acolyte:'Acolyte',senior:'Senior acolyte',order:'Fighting order',ordained:'Ordained'};
 const roleAllowed=r=>{if(S.deity!=='Halea'||!S.sex)return true;if(r==='acolyte'||r==='ordained')return S.sex==='Female';if(r==='order')return S.sex==='Male';return true};
 const titleOf=()=>S.role==='lay'||!FAITH[S.deity]?'follower':FAITH[S.deity][S.role];
-function careerLine(){if(S.career==='Godbound'&&S.deity)return'Godbound of '+esc(S.deity)+', '+titleOf()+(S.occ2?' ('+S.occ2.toLowerCase()+')':'');if(S.career==='Spellweaver')return'Spellweaver, Shek-Pvar'+(S.occ2&&S.occ2!=='Unaffiliated'?' of the '+S.occ2+' convocation':'');return S.career+(S.occ2?' ('+S.occ2.toLowerCase()+')':'')}
+function careerLine(){if(S.career==='Godbound'&&S.deity)return'Godbound of '+esc(S.deity)+', '+titleOf()+(S.occ2?' ('+S.occ2.toLowerCase()+')':'');if(S.career==='Spellweaver'){if(arcanist())return'Spellweaver, non-Pvarist arcanist'+(S.occ2?' ('+S.occ2.toLowerCase()+')':'');const ch=S.chantry&&chantryOk()?', of the '+S.chantry+' chantry':'';if(S.occ2===HANMAVAR)return'Spellweaver, Hanmavâr of the Shek-Pvar'+ch;return'Spellweaver, Shek-Pvar'+(convOf()?' of the '+convOf()+' convocation':'')+ch}return S.career+(S.occ2?' ('+S.occ2.toLowerCase()+')':'')}
 function careerExtra(){if(S.career==='Spellweaver')return'<div class="result">Tradition: <b>Shek-Pvar</b>, the dominant school of magic on Hârn. You choose a convocation at the career step.</div>';
  if(S.career!=='Godbound')return'';const f=FAITH[S.deity];
  return`<div class="field"><div class="lab"><label for="deity"><b>Which god has chosen you?</b></label></div><select id="deity" data-set="deity"><option value="">Choose…</option>${Object.entries(FAITH).map(([d,v])=>`<option value="${esc(d)}" ${S.deity===d?'selected':''}>${esc(d)}, of ${v.of}</option>`).join('')}</select></div>
@@ -553,9 +553,49 @@ const CAREER={
  Loremaster:{who:'Scholars and the learned, in lore both common and strange.',cw:[3,30],pool:[20,50,50,80],fixed:['Literate'],picks:[['=Lecturer','=Travel Planner']],coin:[2,4,10],occ:['Sage or tutor','Scribe','Cartographer','Alchemist','Apothecary','Astrologer','Lexigrapher','Physician']},
  Merchant:{who:'Those who trade wares or services for profit.',cw:[1,30],pool:[20,60,60,60],fixed:['Literate'],picks:[['=Barterer','=I See Your Mind']],coin:[3,6,10],occ:['Mercantyler','Innkeeper','Pilot','Seaman','Peddler']},
  Godbound:{who:'A mortal chosen by a god and granted the right to call on divine aid.',cw:[0,30],pool:[30,40,50,60],fixed:['Godbound'],picks:[['=Literate','Lore']],coin:[1,6,10],occ:['Temple cleric','Mendicant','Fighting order','Lay devotee','Shaman']},
- Spellweaver:{who:'The Shek-Pvar: those who pull at the threads of the world.',cw:[1,20],pool:[20,20,20,40],fixed:['Patterned in the Weave','Literate'],picks:[],coin:[1,6,5],magic:true,occ:['Lyahvi','Peleahn','Jmorvi','Fyvria','Odivshe','Savorya','Unaffiliated']}};
+ Spellweaver:{who:'The Shek-Pvar and other arcanists: those who pull at the threads of the world.',cw:[0,20],pool:[20,20,20,40],fixed:['Patterned in the Weave','Literate'],picks:[],coin:[1,6,5],magic:true,occ:['Lyahvi','Peleahn','Jmorvi','Fyvria','Odivshe','Savorya']}};
 TAL['Patterned in the Weave']='Born to the Pattern. +5 Max Resolve and a True Name.';
-const HOUSE={Lyahvi:['air, light and illusion','Aeromancer'],Peleahn:['fire and motion','Firemancer'],Jmorvi:['metal and making','Earthbinder'],Fyvria:['life, growth and decay','Druid'],Odivshe:['water and cold','Wavemaster'],Savorya:['mind and knowledge','Seer'],Unaffiliated:['no house','']};
+/* Spellweavers: a Shek-Pvar (a convocation, or Hanmavâr, an apprentice in the first two years) with a chantry, or a non-Pvarist arcanist with a calling.
+   Chantries: [name, where, convocations ('*' = all six), realm key for nearness ('' = beyond Hârn)]. Names plain, by Jed's choice. */
+const CONVS=['Lyahvi','Peleahn','Jmorvi','Fyvria','Odivshe','Savorya'],HANMAVAR='Hanmavâr';
+const CHANTRIES=[['Gelimo','Melderyn','Fyvria','melderyn'],['Glenoth','Melderyn','Jmorvi','melderyn'],['Gwaeryn','Orbaal','Jmorvi','orbaal'],['Cherafir','Melderyn','Peleahn Savorya','melderyn'],['Shostim','Rethem','Peleahn','rethem'],['Nurisel','Melderyn','Lyahvi','melderyn'],['Chyrefal','Melderyn','Odivshe','melderyn'],
+ ['Beleka','Ivinia','Jmorvi','ivinia'],['Jarehm','Ivinia','Odivshe','ivinia'],
+ ['Ain Chemu','Diramoa','Lyahvi',''],['Ain Dao','Diramoa','Savorya',''],['Ain Rhit','Diramoa','Peleahn',''],['Amurghi','Shoju','Odivshe',''],['Arlanto','Thonia / Byria','Lyahvi',''],['Bekua','Jankor','Jmorvi',''],['Berema','Emelrene','*',''],['Berone','Azeryan','Jmorvi',''],
+ ['Dariam','Byria','Fyvria',''],['Denqua','Homora','Fyvria',''],['Feslium','Azeryan','Fyvria',''],['Goris','Venarian Sea','Odivshe',''],['Gyenku','Pechosu','Savorya Odivshe',''],['Hacherdad','Hacherdad','*',''],['Hedegu','Emelrene','*',''],['Helas','Karejia','Savorya',''],['Idepan','Mafan','Savorya Odivshe',''],
+ ['Kolomir','Karejia','Fyvria',''],['Kotyn','Molkura','*',''],['Lekuria','Umelria','Lyahvi',''],['Lysara','Azeryan','Peleahn',''],['Makjin','Diramoa','Fyvria',''],['Manquideh','Dalkesh','Lyahvi',''],['Meokolis','Azeryan','Savorya',''],['Mokono','Meluria','Jmorvi',''],['Mokora','Chogoro / Mafan','Jmorvi',''],
+ ['Orlet','Quarphor','Fyvria',''],['Phanosia','Karejia','Jmorvi',''],['Porosua','Azeryan','Odivshe',''],['Reshana','Azeryan','Lyahvi',''],['Silgora','Falania / Hepekeria','Jmorvi',''],['Tengela','Trierzon','Lyahvi',''],['Thubeliz','Falania / Hepekeria','Peleahn',''],['Ulebed','Kaneum','Savorya',''],
+ ['Xerium','Hepekeria','Savorya',''],["'Ydei",'Shoju','Jmorvi',''],['Zerexa','Kaneum','Peleahn Lyahvi',''],['Zerula','Dalkesh','Peleahn Savorya','']];
+const CHMAP=Object.fromEntries(CHANTRIES.map(c=>[c[0],c]));
+const ARCANE={Alchemist:'Alchemy',Astrologer:'Astrology',Invoker:'Invocation',Runemaster:'Rune',Tarotist:'Tarot',Psionicist:'Psionics',Shaman:'Shamanism'};
+const isSw=()=>S.career==='Spellweaver';const arcanist=()=>isSw()&&S.swPath==='arcanist';
+const convOf=()=>CONVS.includes(S.occ2)?S.occ2:'';
+/* Chantries open to this character: their convocation's (any, for a Hanmavâr); those on Hârn unless the tickbox shows all; Ivinia's too for the Ivinia-born. */
+function chantryList(all){const cv=convOf();return CHANTRIES.filter(c=>(!cv||c[2]==='*'||c[2].split(' ').includes(cv))&&(all||(c[3]&&c[3]!=='ivinia')||(c[3]==='ivinia'&&S.nation==='ivinia')))}
+const chantryOk=()=>!!S.chantry&&chantryList(true).some(c=>c[0]===S.chantry);
+/* Rough nearness of each birth realm to the chantry realms, nearest first. A first try, to refine. */
+const NEAR={melderyn:['melderyn','rethem','orbaal','ivinia'],kaldor:['melderyn','orbaal','rethem','ivinia'],chybisa:['melderyn','rethem','orbaal','ivinia'],kanday:['melderyn','rethem','orbaal','ivinia'],tharda:['melderyn','rethem','orbaal','ivinia'],azadmere:['melderyn','orbaal','rethem','ivinia'],evael:['melderyn','rethem','orbaal','ivinia'],other:['melderyn','rethem','orbaal','ivinia'],
+ rethem:['rethem','melderyn','orbaal','ivinia'],orbaal:['orbaal','melderyn','rethem','ivinia'],ivinia:['ivinia','orbaal','melderyn','rethem'],tribal:['melderyn','rethem','orbaal','ivinia']};
+const TRIBE_NEAR={Chelni:'orbaal',Gozyda:'orbaal',Kabloqui:'orbaal',Taelda:'orbaal',Tulwyn:'orbaal',Kamaki:'orbaal',Ymodi:'orbaal',Hodiri:'rethem',Pagaelin:'rethem',Bujoc:'rethem'};
+function nearOrder(){const base=NEAR[S.nation]||NEAR.kaldor;if(S.nation!=='tribal')return base;const t=TRIBE_NEAR[S.place];return t?[t,...base.filter(x=>x!==t)]:base}
+/* A rolled Shek-Pvar of a convocation usually (70%) has the nearest chantry of it; a Hanmavâr has any chantry, at random. */
+function rollChantry(){const L=chantryList(false);if(!L.length){S.chantry='';return}if(!convOf()){S.chantry=L[rnd(L.length)-1][0];return}
+ const ord=nearOrder();const rank=c=>{const i=ord.indexOf(c[3]);return i<0?9:i};const best=Math.min(...L.map(rank));const near=L.filter(c=>rank(c)===best),rest=L.filter(c=>rank(c)!==best);
+ const pool=rest.length&&rnd(100)>70?rest:near;S.chantry=pool[rnd(pool.length)-1][0]}
+/* Rolled Spellweavers: Hanmavâr 10%, a convocation 65%, a non-Pvarist arcanist 25%; born in a tribal nation, always a shaman. */
+function rollSwPath(){S.chAll=false;if(S.nation==='tribal'){/* Rolled Spellweavers born in a tribal nation are shamans. */S.swPath='arcanist';S.occ2='Shaman';S.chantry='';return}const r=rnd(100);if(r<=10){S.swPath='pvar';S.occ2=HANMAVAR}else if(r<=75){S.swPath='pvar';S.occ2=CONVS[rnd(6)-1]}else{S.swPath='arcanist';const k=Object.keys(ARCANE);S.occ2=k[rnd(k.length)-1];S.chantry='';return}rollChantry()}
+function swCareerOk(){if(!isSw())return true;if(arcanist())return!!ARCANE[S.occ2];return S.swPath==='pvar'&&(CONVS.includes(S.occ2)||S.occ2===HANMAVAR)&&chantryOk()}
+/* Saved Spellweavers from before chantries: Unaffiliated becomes Hanmavâr; a convocation keeps its place as Shek-Pvar. */
+function fixSw(){if(S.swPath)return;if(S.occ2==='Unaffiliated')S.occ2=HANMAVAR;if(isSw()&&(CONVS.includes(S.occ2)||S.occ2===HANMAVAR))S.swPath='pvar'}
+function swWises(W){if(!isSw())return;if(arcanist()){if(ARCANE[S.occ2])W.push([ARCANE[S.occ2]+'-wise',20,'career']);return}if(S.swPath!=='pvar')return;
+ if(S.chantry&&chantryOk())W.push([S.chantry+' Chantry-wise',20,'career']);if(convOf())W.push([convOf()+'-wise',20,'career'])}
+function swPanel(){const L=chantryList(S.chAll),cv=convOf();
+ return`<div class="sub"><div class="lab"><span><b>Your path in magic</b></span>${rollBtn('swPath','Roll it')}</div><div class="chips">${chip('Shek-Pvar',S.swPath==='pvar','swpath','pvar','the order of mages')}${chip('Non-Pvarist arcanist',S.swPath==='arcanist','swpath','arcanist','other arcane callings')}</div>
+  ${S.swPath==='pvar'?`<div class="field"><div class="lab"><label for="occ2"><b>Convocation</b> <span class="hint">a house within the order, for the story only</span></label></div><select id="occ2" data-set="occ2">${[HANMAVAR,...CONVS].map(o=>`<option value="${o}" ${S.occ2===o?'selected':''}>${o===HANMAVAR?'Hanmavâr, an apprentice in the first two years, not yet in a convocation':o+', '+HOUSE[o][0]}</option>`).join('')}</select></div>
+   <div class="field"><div class="lab"><label for="chantry"><b>Chantry</b> <span class="hint">${cv?'chantries of the '+cv+' convocation':'any chantry, as a Hanmavâr'}</span></label>${rollBtn('chantry','Roll a chantry')}</div><select id="chantry" data-set="chantry"><option value="">Choose…</option>${L.map(c=>`<option value="${esc(c[0])}" ${S.chantry===c[0]?'selected':''}>${esc(c[0])}, ${c[1]}${c[2]==='*'?' (all six convocations)':''}</option>`).join('')}</select>
+   <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="chall" data-chall="1" ${S.chAll?'checked':''}> Show chantries beyond Hârn</label>${S.chantry&&!chantryOk()?`<span class="hint">${esc(S.chantry)} has no ${cv} chantry. Choose another.</span>`:''}</div>`:''}
+  ${S.swPath==='arcanist'?`<div class="field"><div class="lab"><label for="occ2"><b>Calling</b> <span class="hint">magic outside the Shek-Pvar, for the story only; the rules are the Spellweaver's</span></label></div><select id="occ2" data-set="occ2"><option value="">Choose…</option>${Object.keys(ARCANE).map(o=>`<option value="${o}" ${S.occ2===o?'selected':''}>${o}</option>`).join('')}</select></div>`:''}
+  <div class="result">${(()=>{const W=[];swWises(W);return W.length?W.map(w=>`<b>${esc(w[0])} ${w[1]}</b>`).join(' and ')+' come'+(W.length===1?'s':'')+' with the career.':S.swPath?'Choose the rest above to gain your -wise'+(S.swPath==='pvar'?'s':'')+' at 20.':'Choose a path.'})()}</div></div>`}
+const HOUSE={Lyahvi:['air, light and illusion','Aeromancer'],Peleahn:['fire and motion','Firemancer'],Jmorvi:['metal and making','Earthbinder'],Fyvria:['life, growth and decay','Druid'],Odivshe:['water and cold','Wavemaster'],Savorya:['mind and knowledge','Seer']};
 const SWT={Aeromancer:[['Conjure','Control'],['Air','Earth','Spirit','Thought'],['Beasts','Spheres']],Battlemage:[['Conjure','Destroy'],['Beasts','Body','Earth','Fire'],['Spirit','Thought']],Druid:[['Change','Control'],['Beasts','Earth','Plants','Water'],['Spheres','Spirit']],Earthbinder:[['Change','Control'],['Beasts','Air','Earth','Plants'],['Spirit','Thought']],Elementalist:[['Conjure','Control'],['Air','Earth','Fire','Water'],['Body','Thought']],Firemancer:[['Conjure','Control'],['Air','Fire','Plants','Thought'],['Water','Body']],Healer:[['Conjure','Witness'],['Beasts','Body','Thought','Water'],['Spheres','Spirit']],Inquisitor:[['Destroy','Witness'],['Body','Fire','Spheres','Spirit'],['Earth','Water']],Seer:[['Control','Witness'],['Body','Air','Spheres','Thought'],['Beasts','Earth']],Sorcerer:[['Control','Destroy'],['Body','Fire','Spheres','Thought'],['Beasts','Spirit']],Spiritbinder:[['Change','Control'],['Body','Spheres','Spirit','Thought'],['Plants','Fire']],Wavemaster:[['Change','Control'],['Air','Beasts','Body','Water'],['Fire','Spirit']]};
 const newSw=()=>({binds:[],strands:[],thin:[],bp:{},sl:{},sx:{},ex:'',thread:'',name:'',tpl:''});
 const sum=o=>Object.values(o).reduce((a,b)=>a+b,0);
@@ -583,7 +623,7 @@ const poolLeft=cat=>{const c=cdef();return c?c.pool[CATS.indexOf(cat)]-spent(cat
 function armorNext(i){const have=[...(cdef()?cdef().fixed:[]),...S.ctal.filter((_,k)=>k!==i)].filter(n=>n&&n.startsWith('Armor Training')).map(n=>ROMAN.indexOf(n.split(' ')[2])+1);const next=Math.max(0,...have)+1;return next>4?null:'Armor Training '+ROMAN[next-1]}
 function talentOpts(i){const c=cdef();return c.picks[i].flatMap(t=>t[0]==='='?[t.slice(1)]:Object.keys(TALC[t]).map(n=>n==='Armor Training'?armorNext(i):n).filter(Boolean))}
 function careerTalents(){const c=cdef();if(!c)return[];return[...c.fixed,...S.ctal.slice(0,c.picks.length).filter(Boolean)].filter(n=>n!==S.cswap)}
-function careerTongues(L,W){const c=cdef();if(!c)return;const v=c.cw[1];if(S.career==='Godbound'&&S.deity)W.push([S.deity+'-wise',30,'career']);
+function careerTongues(L,W){const c=cdef();if(!c)return;swWises(W);const v=c.cw[1];if(S.career==='Godbound'&&S.deity)W.push([S.deity+'-wise',30,'career']);
  S.cw.slice(0,c.cw[0]).forEach(x=>{if(x.mode==='wise'&&x.name)W.push([x.name.replace(/-wise$/i,'')+'-wise',v,'career']);else if(x.mode.startsWith('lang:'))L.push([x.mode.slice(5),v,'career']);else if(x.mode.startsWith('add:')){const n=x.mode.slice(4);const e=L.find(l=>l[0]===n)||W.find(w=>w[0]===n);if(e)e[1]=Math.min(70,e[1]+v)}})}
 const coinText=()=>!S.cls?'':[S.cls==='slave'?'':WEALTH[S.cls][S.wealth]+'d from family',cdef()&&S.ccoin?S.ccoin+'d from your career':'',S.ro.bonus==='coin'?'100d from rounding out':''].filter(Boolean).join(' + ')||'none';
 
@@ -759,7 +799,7 @@ function namePanel(){const ev=everyday(),fm=formalName();
   <div class="result">${S.nameHand?(S.handName.trim()?`Name: <b>${esc(S.handName.trim())}</b> (written by hand)`:'Write the name above, or untick to build it from its parts.'):ev?`Name: <b>${esc(ev)}</b>${fm?`<br>Formal name: ${esc(fm)}`:''}`:'Roll or type a given name to name your character.'}</div></div>
  ${portraitPanel()}`}
 function tgPanel(){const tr=S.traits,full=tr.length>=3;const sw=signWords();const desc=S.abil.map(a=>a.desc).filter(Boolean);
- const draw=[...LIFET.filter(([t])=>S.life[t]).map(([t])=>lifeEv(t).name+(S.life[t].rel?' (a '+S.life[t].rel.toLowerCase()+')':'')),...(S.allies||[]),S.parent,S.standing?S.standing+' in the clan':'',S.concept].filter(Boolean);
+ const draw=[...LIFET.filter(([t])=>S.life[t]).map(([t])=>lifeEv(t).name+(S.life[t].rel?' ('+relText(S.life[t])+')':'')),...allyList(),S.parent,S.standing?S.standing+' in the clan':'',S.concept].filter(Boolean);
  return`<header><h2>Traits and goals</h2><p>How your character tends to behave, and what they are trying to do. Traits can change as the campaign unfolds. Goals are how you earn experience.</p></header>
  <div class="sub"><div class="lab"><span><b>Personality traits</b> <span class="hint">two or three</span></span><span class="cnt ${tr.length>=2&&tr.length<=3?'ok':'warn'}">${tr.length} chosen</span></div>
   <div class="chips">${Object.keys(TRAITS).map(t=>`<button class="chip" title="${TRAITS[t]}" aria-pressed="${tr.includes(t)}" data-act="tr" data-val="${t}" ${full&&!tr.includes(t)?'disabled':''}>${t}</button>`).join('')}</div>
@@ -868,6 +908,13 @@ const ivName=()=>ivNative()||patroOn();
 function rollFather(){const s=nameSet(true);S.father=rollPart(s.given,s.cult)}
 function nameTail(){const p=patronymic();if(elder()||!S.clan)return p?' '+p:'';if(thrall())return', thrall of clan '+S.clan;if(ivName())return(p?' '+p:'')+', of clan '+S.clan;return(S.cls==='noble'?' ':' of ')+S.clan}
 function rollClan(){const s=nameSet();if(ivClan()&&S.place&&S.ivc!=='minor'&&S.ivc!=='ind')S.clan=ivGreatClan();else if(s.clan)S.clan=rollPart(s.clan,s.cult);S.clanAuto=S.clan}
+/* A name for someone in the character's life: same culture and rules as the character's own. Their sex is weighted by the character's: a man's acquaintances are mostly men (80%), a woman's lean to women (60%). */
+function npcName(){const fem=S.sex==='Male'?rnd(100)<=20:S.sex==='Female'?rnd(100)<=60:rnd(2)===1;const s=nameSet(true);const key=s.given.split('+').map(x=>x.slice(0,-1)+(fem?'w':'m')).join('+');
+ const g=rollPart(key,s.cult);if(elder()||!s.clan)return g;const clan=ivClan()?ivGreatClan():rollPart(s.clan,s.cult);
+ if(ivNative()){const f=rollPart(s.given,s.cult);return g+' '+f+(fem?'dedt':'sen')+', of clan '+clan}return g+' of '+clan}
+const allyText=i=>{const a=S.allies[i],n=(S.allyNames||[])[i];if(!n)return a;const[k,w]=a.split(': ');return k+': '+n+', '+w};
+const allyList=()=>(S.allies||[]).map((_,i)=>allyText(i));
+const relText=l=>l.rel?'a '+l.rel.toLowerCase()+(l.relName?', '+l.relName:''):'';
 function fullName(){const s=nameSet();if(!S.clan&&!elder())rollClan();if(patroOn()&&!S.father)rollFather();const g=rollPart(s.given,s.cult);S.given=g;return everyday()}
 /* Bynames: an everyday name that takes precedence. With one, the name reads "Erik Halfhand" and the formal name (patronymic, clan) sits beneath it.
    Ticked by default when a character has neither clan nor patronymic. */
@@ -885,7 +932,7 @@ function showFormal(){const f=$('#formal');if(!f)return;const t=formalName();f.t
 function setFather(v){S.father=v}
 
 /* ---------- state ---------- */
-const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,occ2:'',cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
+const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
 let S=blank();
 const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true};
 const AGE_R={Young:[20,29],Adult:[30,49],Old:[50,69]};
@@ -969,7 +1016,7 @@ function issues(){const I={0:[],1:[],2:[],3:[],4:[],6:[],8:[],9:[],10:[],11:[],1
  if(S.dual&&S.dual===S.nation&&!orbMixed()&&(S.dual!=='tribal'||S.dualTribe===S.place))I[4].push('The family culture is the same as the birthplace. Pick a different one or switch to native.');
  if(tribalFamily()&&!S.dualTribe)I[4].push('Choose which tribal nation your family is from.');
  return I}
-function done(i){switch(i){case 14:return!!currentName();case 0:return!!S.birth;case 1:return!!(S.nation&&S.place)&&(S.nation!=='orbaal'||!!S.people);case 2:return!!(S.cls&&S.occ)&&(!ivClan()||!!S.ivc);case 3:return!!S.bg&&slotsLeft()===0;case 4:return!!S.nation;case 5:return!!(S.sibs&&S.travel);case 6:return Object.keys(CAT).every(c=>S.b30[c]);case 7:return S.abil.length===2&&S.abil.every(a=>a.ex&&a.talent&&a.desc)&&!subsMissing('a').length;case 8:return LIFET.every(([t])=>S.life[t]&&S.life[t].pick);case 9:{const c=cdef();return!!c&&CATS.every(k=>poolLeft(k)===0)&&c.picks.every((_,i)=>S.ctal[i])&&S.cw.slice(0,c.cw[0]).filter(x=>x.mode&&(x.mode!=='wise'||x.name)).length===c.cw[0]&&S.ccoin!==null&&(!c.magic||swDone())&&!subsMissing('fc').length}case 10:return roDone()&&!subsMissing('r').length;case 11:return atLeft()===0&&S.at.tough%2===0;case 12:return S.traits.length>=2&&S.traits.length<=3;case 13:return S.gear.coin!==null&&S.gear.freeN!==null&&gearCalc().left>=0}}
+function done(i){switch(i){case 14:return!!currentName();case 0:return!!S.birth;case 1:return!!(S.nation&&S.place)&&(S.nation!=='orbaal'||!!S.people);case 2:return!!(S.cls&&S.occ)&&(!ivClan()||!!S.ivc);case 3:return!!S.bg&&slotsLeft()===0;case 4:return!!S.nation;case 5:return!!(S.sibs&&S.travel);case 6:return Object.keys(CAT).every(c=>S.b30[c]);case 7:return S.abil.length===2&&S.abil.every(a=>a.ex&&a.talent&&a.desc)&&!subsMissing('a').length;case 8:return LIFET.every(([t])=>S.life[t]&&S.life[t].pick);case 9:{const c=cdef();return!!c&&CATS.every(k=>poolLeft(k)===0)&&c.picks.every((_,i)=>S.ctal[i])&&S.cw.slice(0,c.cw[0]).filter(x=>x.mode&&(x.mode!=='wise'||x.name)).length===c.cw[0]&&S.ccoin!==null&&(!c.magic||swDone())&&swCareerOk()&&!subsMissing('fc').length}case 10:return roDone()&&!subsMissing('r').length;case 11:return atLeft()===0&&S.at.tough%2===0;case 12:return S.traits.length>=2&&S.traits.length<=3;case 13:return S.gear.coin!==null&&S.gear.freeN!==null&&gearCalc().left>=0}}
 function signPair(b){const doy=(b.m-1)*30+b.d;let i=SIGNS.length-1;for(let k=0;k<SIGNS.length;k++)if(doy>=SIGNS[k][1])i=k;const start=SIGNS[i][1];const into=(doy-start+360)%360;const next=SIGNS[(i+1)%12];const len=(next[1]-start+360)%360;
  return{main:SIGNS[i][0],other:into<2?SIGNS[(i+11)%12][0]:into>=len-2?next[0]:''}}
 function sunsign(b){const p=signPair(b);return p.other?p.main+'–'+p.other+' cusp':p.main}
@@ -990,6 +1037,8 @@ const R={
  place(){const n=NAT[S.nation];S.place=pickW(n.places).name;S.inSet=rnd(100)<=10},
  people(){const w={noble:100,guilded:55,unguilded:55,serf:5,slave:10}[S.cls];S.people=rnd(100)<=(w===undefined?25:w)?'Ivinian':'Jarin'},
  clan(){rollClan()},
+ swPath(){rollSwPath()},
+ chantry(){rollChantry()},
  given(){const s=nameSet();S.given=rollPart(s.given,s.cult)},
  father(){setFather((()=>{const s=nameSet(true);return rollPart(s.given,s.cult)})())},
  years(){const[lo,hi]=AGE_R[S.age];S.years=lo+rnd(hi-lo+1)-1;S.ageSet=true},
@@ -1014,7 +1063,7 @@ const R={
  atAll(){S.at=newAt();const a=S.at;let g=50;while(atLeft()>0&&g--){const k=['res','init','tough','dt'][rnd(4)-1];if(k==='tough'){if(atLeft()>=2)a.tough+=2}else a[k]++}},
  ccoin(){const c=cdef();S.ccoin=dice(c.coin[0],c.coin[1])*c.coin[2]},
  cpRest(){CATS.forEach(k=>{let guard=500;while(poolLeft(k)>0&&guard--){const open=CAT[k].filter(x=>baseVal(x)+(S.cp[x]||0)<70);if(!open.length)break;const x=open[rnd(open.length)-1];S.cp[x]=(S.cp[x]||0)+Math.min(5,poolLeft(k),70-baseVal(x)-(S.cp[x]||0))}})},
- careerAll(){const c=cdef();if(!c)return;S.occ2=c.occ[rnd(c.occ.length)-1];S.cw=[];for(let i=0;i<c.cw[0];i++)S.cw.push(i===1?{mode:'lang:'+(LANGS.find(l=>!tongues(true).L.some(x=>x[0]===l))||'Jarin'),name:''}:{mode:'wise',name:i?(S.place||'Home')+' district':S.occ2});S.cp={};R.cpRest();S.ctal=[];c.picks.forEach((_,i)=>{const o=talentOpts(i);S.ctal[i]=o[rnd(o.length)-1]});S.cswap='';R.ccoin();S.sw=newSw();if(c.magic)R.swRest()},
+ careerAll(){const c=cdef();if(!c)return;if(c.magic)rollSwPath();else S.occ2=c.occ[rnd(c.occ.length)-1];S.cw=[];for(let i=0;i<c.cw[0];i++)S.cw.push(i===1?{mode:'lang:'+(LANGS.find(l=>!tongues(true).L.some(x=>x[0]===l))||'Jarin'),name:''}:{mode:'wise',name:i?(S.place||'Home')+' district':S.occ2});S.cp={};R.cpRest();S.ctal=[];c.picks.forEach((_,i)=>{const o=talentOpts(i);S.ctal[i]=o[rnd(o.length)-1]});S.cswap='';R.ccoin();S.sw=newSw();if(c.magic)R.swRest()},
  life(t){const pool=LIFE[t].filter(e=>!(t==='origin'&&S.lifeFilter&&unfit(e))).map(e=>({name:e.lo,w:e.hi-e.lo+1}));const lo=pickW(pool).name;S.life[t]={lo,pick:'',rel:''};const o=optionsFor(lifeEv(t));if(o.length===1)S.life[t].pick=o[0];if(t==='origin')afterOrigin()},
 
  sibs(){const c=culture();const n=c==='Khuzan'?dice(3,3)-2:c==='Sindarin'?dice(3,2)-2:(c==='Tribal'&&S.bg!=='wanderer')?dice(8,2)-7:dice(6,2)-5;S.sibs={n,rank:rnd(n)}},
@@ -1023,7 +1072,7 @@ const R={
  travel(){const roll=rnd(10);S.travel={roll}},
  allies(){const r=rnd(10);const who=()=>{const w=rnd(10);return w===1?'a relative in another trade':w<=3?'someone in another trade':w<=7?'a colleague':w<=9?'a superior':'a noble or official'};
   const out=[];const ally=()=>{const w=who();out.push((/superior|noble/.test(w)?'Patron':'Friend')+': '+w)};const rival=()=>out.push('Rival: '+who());
-  if(r===1){rival();rival()}else if(r<=3)rival();else if(r>=8&&r<=9)ally();else if(r===10){ally();ally();rival()}S.allies=out}
+  if(r===1){rival();rival()}else if(r<=3)rival();else if(r>=8&&r<=9)ally();else if(r===10){ally();ally();rival()}S.allies=out;S.allyNames=[]}
 };
 ['abilRest','careerAll','roAll'].forEach(k=>{const f=R[k];R[k]=function(){f.apply(R,arguments);fillSubs()}});
 function rollAll(){rollAll0();if(S.career==='Godbound'&&issues()[6].length)S.role='lay';fillSubs()}
@@ -1091,7 +1140,7 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
   <div class="field"><div class="lab"><label for="parent"><b>Parentage</b></label>${rollBtn('parent','Roll d100')}</div><select id="parent" data-set="parent"><option value="">Choose…</option>${PARENT.map(p=>`<option ${S.parent===p.name?'selected':''}>${p.name}</option>`).join('')}</select></div>
   <div class="field"><div class="lab"><b>Standing in the clan</b>${rollBtn('standing','Roll d100')}</div><div class="chips">${STANDING.map(s=>chip(s,S.standing===s,'standing',s)).join('')}</div></div>
   <div class="field"><div class="lab"><b>Travel before play</b>${rollBtn('travel','Roll d10')}</div><div class="result">${S.travel?`d10 → ${S.travel.roll}${tm.parts.length?', '+tm.parts.join(', '):''} = <b>${S.travel.roll+tm.m}</b> · <b>${travelOut().label}</b>: ${travelOut().text}.`:'Not rolled yet. Modifiers from your origin so far: '+(tm.parts.join(', ')||'none')+'.'+(S.nation==='ivinia'?' Born in Ivinia: at least Far Region.':'')}</div></div>
-  <div class="field"><div class="lab"><b>Allies and rivals</b>${rollBtn('allies','Roll d10')}</div><div class="result">${S.allies?(S.allies.length?S.allies.map(a=>`<b>${a.split(': ')[0]}</b>: ${a.split(': ')[1]}`).join(' · '):'None to speak of.'):'Not rolled yet.'}</div></div>`}
+  <div class="field"><div class="lab"><b>Allies and rivals</b>${rollBtn('allies','Roll d10')}</div><div class="result">${S.allies?(S.allies.length?S.allies.map(a=>`<b>${a.split(': ')[0]}</b>: ${a.split(': ')[1]}`).join(' · '):'None to speak of.'):'Not rolled yet.'}</div>${(S.allies||[]).map((a,i)=>`<div class="chips"><label class="hint" for="aname${i}" style="min-width:9em">${esc(a)}</label><input class="text" style="width:auto;flex:1" id="aname${i}" data-aname="${i}" value="${esc((S.allyNames||[])[i]||'')}" placeholder="Their name">${rollBtn('aname:'+i,'Roll a name')}</div>`).join('')}</div>`}
  if(S.step===6){h=`<header><h2>Concept</h2><p>Start with a rough idea of who this is. It isn't binding. Then name what they were always best at.</p></header>${warn}
   <div class="field"><div class="lab"><label for="concept"><b>In a sentence</b></label></div><input id="concept" class="text" data-set="concept" value="${esc(S.concept)}" placeholder="A runaway squire turned caravan guard"></div>
   <div class="field"><div class="lab"><span><b>The career you have in mind</b> <span class="hint">optional</span></span></div><div class="chips">${CAREERS.map(c=>chip(c,S.career===c,'career',c)).join('')}</div><span class="hint">Some life events reward a future Spellweaver or Godbound differently, so it helps to say so now. You can change it later.</span></div>
@@ -1116,14 +1165,14 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
    ${e?`<div class="result"><b>${e.name}.</b> ${e.text}${unfit(e)?' <i>This one does not fit your earlier choices. Reinterpret it with your GM.</i>':''}</div>
    ${t==='origin'&&parentClash()?(l.keepParent?`<span class="hint">You kept your parentage as "${S.parent.toLowerCase()}". How both can be true is for your backstory. <button class="link" data-act="parentFit">Change it to fit after all</button></span>`:`<div class="result">This event suggests your parentage was <b>${parentClash().toLowerCase()}</b>, but you have <b>${S.parent.toLowerCase()}</b>.<div class="chips" style="margin-top:8px"><button class="btn" data-act="parentFit">Change parentage to fit</button><button class="btn" data-act="parentKeep">Keep both and explain it in my story</button></div></div>`):''}
    <div class="field"><div class="lab"><span><b>Reward</b>${(e.sw&&S.career==='Spellweaver')||(e.gb&&S.career==='Godbound')?` <span class="hint">for a future ${S.career}</span>`:''}</span></div><div class="chips">${opts.map(k=>chip(grantLabel(k),l.pick===k,'lpick',t+'|'+k)).join('')}</div></div>
-   <div class="field"><div class="lab"><span><b>Someone from this event</b> <span class="hint">optional</span></span>${rollBtn('rel:'+t,'Roll d4')}</div><div class="chips">${['Friend','Patron','Rival','Adversary'].map(r=>chip(r,l.rel===r,'lrel',t+'|'+r)).join('')}</div></div>`:''}</div>`}).join('')}`}
+   <div class="field"><div class="lab"><span><b>Someone from this event</b> <span class="hint">optional</span></span>${rollBtn('rel:'+t,'Roll d4')}</div><div class="chips">${['Friend','Patron','Rival','Adversary'].map(r=>chip(r,l.rel===r,'lrel',t+'|'+r)).join('')}</div>${l.rel?`<div class="chips"><input class="text" style="width:auto;flex:1" id="lname_${t}" data-lname="${t}" value="${esc(l.relName||'')}" placeholder="Their name" aria-label="Name of your ${l.rel.toLowerCase()}">${rollBtn('lname:'+t,'Roll a name')}</div>`:''}</div>`:''}</div>`}).join('')}`}
  if(S.step===9){const c=cdef();const base=tongues(true);const known=[...base.L,...base.W].map(x=>x[0]);
   if(c)while(S.cw.length<c.cw[0])S.cw.push({mode:'',name:''});
   h=`<header><h2>Previous career</h2><p>What you did before the adventuring life. It is not a class and does not bind you afterwards. It gives skill points to spend, Talents and some coin.</p></header>${warn}
   <div class="cards">${Object.entries(CAREER).map(([k,v])=>`<button class="card" aria-pressed="${S.career===k}" data-act="career" data-val="${k}"><h3>${k}</h3><span>${v.who}</span><span class="hint">Combat ${v.pool[0]} · Adventuring ${v.pool[1]} · Social ${v.pool[2]} · Lore ${v.pool[3]}${v.magic?' · Magic 100':''}</span></button>`).join('')}</div>
   ${!c?'':`
-  <div class="sub"><div class="lab"><label for="occ2"><b>${c.magic?'Which convocation of the Shek-Pvar?':'What kind of '+S.career.toLowerCase()+'?'}</b> <span class="hint">${c.magic?'a house within the order, for the story only':'a Hârn occupation, for the story only'}</span></label></div><select id="occ2" data-set="occ2"><option value="">Choose…</option>${c.occ.map(o=>`<option value="${o}" ${S.occ2===o?'selected':''}>${o}${c.magic&&o!=='Unaffiliated'?', '+HOUSE[o][0]:''}</option>`).join('')}</select>${S.occ&&!c.magic?`<span class="hint">Your family's trade was ${S.occ.toLowerCase()}.</span>`:''}</div>
-  <div class="sub"><div class="lab"><span><b>Lore of the trade</b> <span class="hint">${c.cw[0]?c.cw[0]+' at '+c.cw[1]+', each a new -wise, a new language, or added to one you have':'your god\'s -wise at 30'}</span></span></div>
+  ${c.magic?swPanel():`<div class="sub"><div class="lab"><label for="occ2"><b>What kind of ${S.career.toLowerCase()}?</b> <span class="hint">a Hârn occupation, for the story only</span></label></div><select id="occ2" data-set="occ2"><option value="">Choose…</option>${c.occ.map(o=>`<option value="${o}" ${S.occ2===o?'selected':''}>${o}</option>`).join('')}</select>${S.occ?`<span class="hint">Your family's trade was ${S.occ.toLowerCase()}.</span>`:''}</div>`}
+  <div class="sub"><div class="lab"><span><b>Lore of the trade</b> <span class="hint">${c.cw[0]?c.cw[0]+' at '+c.cw[1]+', each a new -wise, a new language, or added to one you have':c.magic?'the -wises of your chantry and convocation, or your calling, at 20 (above)':'your god\'s -wise at 30'}</span></span></div>
    ${S.career==='Godbound'?`<div class="result">${S.deity?`<b>${esc(S.deity)}-wise 30</b> comes with the career.`:'Choose your god on the Concept tab to gain its -wise at 30.'}</div>`:''}
    ${S.cw.slice(0,c.cw[0]).map((x,i)=>`<div class="chips"><select id="cw${i}" data-cw="${i}" aria-label="Lore of the trade ${i+1}"><option value="">Choose…</option><option value="wise" ${x.mode==='wise'?'selected':''}>A new -wise (name it)</option>${langChoices().filter(l=>!known.includes(l)).map(l=>`<option value="lang:${l}" ${x.mode==='lang:'+l?'selected':''}>New language: ${l}</option>`).join('')}${known.map(n=>`<option value="add:${esc(n)}" ${x.mode==='add:'+n?'selected':''}>Add ${c.cw[1]} to ${esc(n)}</option>`).join('')}</select>${x.mode==='wise'?`<input class="text" style="width:auto;flex:1" id="cwn${i}" data-cwname="${i}" value="${esc(x.name)}" placeholder="Name it, such as Longbow or Tashal" aria-label="Name of the -wise">`:''}</div>`).join('')}</div>
   <div class="sub"><div class="lab"><span><b>Skill points</b> <span class="hint">one point raises a skill by one, to 70 at most. Points stay in their category.</span></span>${rollBtn('cpRest','Spend the rest at random')}</div>
@@ -1157,11 +1206,11 @@ function sheet(){const c=culture();const o=occ();const t=tongues();const {led,ex
  const apt=`<div class="sec"><h3>Aptitudes and talents</h3><div class="ents">${S.abil.length?S.abil.map(a=>`<div class="ent"><b>${a.name}</b>${a.desc?` <small>${esc(a.desc)}</small>`:''}</div>`).join('')+Object.entries(talentSlots().reduce((m,[id,t])=>{const k=t+(subOf(id,t)?': '+subOf(id,t):'');m[k]=[t,(m[k]?m[k][1]:0)+1];return m},{})).map(([k,[t,n]])=>`<div class="ent"><b>${esc(k)}${n>1?' ×'+n:''}</b> <small>${TAL[t]||''}</small></div>`).join(''):e}</div></div>`;
  const left=slotsLeft();
  const sk=`<div class="sec"><h3>Skills ${S.bg&&left?`<span class="cnt warn">${left} choices left</span>`:`<small>${S.bg?'upbringing applied':'base values'}</small>`}</h3><div class="skills">${Object.entries(CAT).map(([g,list])=>`<div class="grp"><h4>${g}</h4>${list.map(s=>{const parts=led[s];const sum=parts.reduce((a,p)=>a+p[0],0);const v=Math.max(0,Math.min(70,sum));return`<div class="sk ${sum>20||ex[s]?'up':''} ${sum>70?'over':''}" title="${parts.map(p=>p[0]+' '+p[1]).join(' + ')}${sum>70?' — '+(sum-70)+' lost to the cap of 70':''}"><span>${s}${S.ro.savvy.includes(s)?'<span class="ex" title="Savvy">S</span>':''}${ex[s]?`<span class="ex">Ex${Math.min(4,ex[s]+1)}</span>`:''}${parts.length>1?`<span class="src">${parts.map(p=>p[0]).join(' + ').replace(/\+ -/g,'− ')}</span>`:''}</span><b>${v}</b></div>`}).join('')}</div>`).join('')}</div></div>`;
- const kin=`<div class="sec"><h3>Kin and travel</h3><dl>${ageSettled()?`<dt>Age</dt><dd>${S.age}, ${ageYears()}</dd>`:''}<dt>Born on</dt><dd>${S.birth?S.birth.d+' '+monthName(S.birth.m)+(ageSettled()?' '+yearTxt(birthYear()):'')+', '+sunsign(S.birth):e}</dd><dt>Family</dt><dd>${[S.sibs?(S.sibs.n===1?'Only child':ord(S.sibs.rank)+' of '+S.sibs.n):'',S.parent,S.standing?S.standing+' in the clan':''].filter(Boolean).join(' · ')||e}</dd><dt>Travelled</dt><dd>${S.travel?travelOut().label:e}</dd><dt>People</dt><dd>${S.allies?(S.allies.join(' · ')||'None'):e}</dd></dl></div>`;
+ const kin=`<div class="sec"><h3>Kin and travel</h3><dl>${ageSettled()?`<dt>Age</dt><dd>${S.age}, ${ageYears()}</dd>`:''}<dt>Born on</dt><dd>${S.birth?S.birth.d+' '+monthName(S.birth.m)+(ageSettled()?' '+yearTxt(birthYear()):'')+', '+sunsign(S.birth):e}</dd><dt>Family</dt><dd>${[S.sibs?(S.sibs.n===1?'Only child':ord(S.sibs.rank)+' of '+S.sibs.n):'',S.parent,S.standing?S.standing+' in the clan':''].filter(Boolean).join(' · ')||e}</dd><dt>Travelled</dt><dd>${S.travel?travelOut().label:e}</dd><dt>People</dt><dd>${S.allies?(esc(allyList().join(' · '))||'None'):e}</dd></dl></div>`;
  const mk=Object.keys(led).filter(k=>/^(Bind|Strand|Piety)/.test(k));
  const thinK=cdef()&&cdef().magic?S.sw.thin.map(x=>'Strand: '+x):[];const mkAll=[...new Set([...mk,...thinK])];
  const mag=mkAll.length||signAff()?`<div class="sec"><h3>Magic${cdef()&&cdef().magic&&S.sw.thread?` <small>d8 Thread in ${S.sw.thread}</small>`:''}</h3>${cdef()&&cdef().magic&&S.sw.name?`<div class="row"><span>True Name</span><span>${esc(S.sw.name)}</span></div>`:''}${signAff()?`<div class="row"><span>Affinity <small>+1 Mastery</small></span><span>${signAff()[0].join(', ')}</span></div><div class="row"><span>Impedance <small>+1 TC</small></span><span>${signAff()[1].join(', ')}</span></div>`:''}<div class="rows">${mkAll.map(k=>{const parts=led[k]||[];return`<div class="row"><span>${k}${S.ro.savvy.includes(k)?' <span style="color:var(--ok-t);font-size:11px;font-weight:700" title="Savvy">S</span>':''}${ex[k]?` <span class="ex" style="color:var(--ok-t);font-size:11px;font-weight:700">Ex${ex[k]+1}</span>`:''}${thinK.includes(k)?' <small>Thin</small>':''} <small>${parts.map(q=>q[0]).join(' + ')}</small></span><span>${Math.min(k.startsWith('Strand')?99:k==='Piety'?90:70,parts.reduce((a,q)=>a+q[0],0))}</span></div>`}).join('')}</div></div>`:'';
- const lf=`<div class="sec"><h3>Life events</h3><div class="ents">${LIFET.some(([t])=>S.life[t])?LIFET.filter(([t])=>S.life[t]).map(([t,n])=>{const l=S.life[t];return`<div class="ent"><b>${lifeEv(t).name}</b> <small>${n.toLowerCase()}${l.pick?', '+grantLabel(l.pick):''}${l.rel?', a '+l.rel.toLowerCase():''}</small></div>`}).join(''):e}</div></div>`;
+ const lf=`<div class="sec"><h3>Life events</h3><div class="ents">${LIFET.some(([t])=>S.life[t])?LIFET.filter(([t])=>S.life[t]).map(([t,n])=>{const l=S.life[t];return`<div class="ent"><b>${lifeEv(t).name}</b> <small>${n.toLowerCase()}${l.pick?', '+grantLabel(l.pick):''}${l.rel?', '+esc(relText(l)):''}</small></div>`}).join(''):e}</div></div>`;
  const G=gearCalc();const gs=`<div class="sec"><h3>Gear ${S.gear.coin!==null?`<span class="cnt ${G.left<0?'bad':'ok'}">${G.left<0?(-G.left)+'d over':G.left+'d left'}</span>`:''}</h3><div class="rows stripe"><div class="row"><span>Dagger <small>damage 1, at hand</small></span><span></span></div>${S.gear.items.map(x=>{const w=WMAP[x.n];return`<div class="row"><span>${w[0]} <small>${w[1]==='Shield'?w[3]:'damage '+w[3]}${x.hand?'':', packed'}</small></span><span></span></div>`}).join('')}${G.pieces.map(x=>`<div class="row"><span>${x.n} <small>${x.a[0]}</small></span><span>AP ${x.a[2]}</span></div>`).join('')}${S.gear.misc.map(n=>`<div class="row"><span>${n}</span><span></span></div>`).join('')}</div>${Object.keys(G.pn).length?`<p class="fine">In this armor: ${Object.entries(G.pn).map(([k,v])=>k+' −'+v).join(', ')}</p>`:''}<p class="fine">Supply dice: Gear, Ammo, Rations and Medical at d12</p></div>`;
  const trLine=()=>{const t=S.traits.map(x=>`<b>${esc(x)}</b>`);if(!t.length)return'<span class="empty">no traits yet</span>';const list=t.length===1?t[0]:t.length===2?t.join(' and '):t.slice(0,-1).join(', ')+' &amp; '+t[t.length-1];return S.traits.some(x=>x.trim().split(/\s+/).length>=3)?list+'.':'You are '+list+'.'};
  const gSub=(kind,label)=>{const l=S.goals.filter(g=>g.kind===kind);return l.length?`<div class="grp"><h4 class="subh">${label}</h4><div class="ents">${l.map(g=>`<div class="ent goal">${esc(g.text)}</div>`).join('')}</div></div>`:''};
@@ -1178,7 +1227,7 @@ function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e
  store();const n=$('#savenote');n.textContent=saveOK?'Saved in this browser':saveFull?'Not saved: this browser\'s storage is full. Remove a portrait, or download and delete old characters.':'Not saved: this browser is blocking storage';n.classList.toggle('bad',!saveOK)}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STOREKEY)||'null');if(d&&d.v===2&&Array.isArray(d.list)){CHARS=d.list.filter(c=>c&&c.id&&c.S&&typeof c.S==='object');CUR=CHARS.some(c=>c.id===d.current)?d.current:null;Object.assign(GM,d.GM||{});return}}catch(e){}
  try{const d=JSON.parse(localStorage.getItem(SAVEKEY)||'null');if(d&&d.v===1&&d.S&&typeof d.S==='object'){Object.assign(GM,d.GM||{});const id=newId();CHARS=[{id,name:d.name||'',S:d.S,saved:Date.now(),sum:null}];CUR=id}}catch(e){}}
-function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));if(!('orbLang' in e.S))S.orbLang='Ivinian';if(!S.nameV)migrateName(e.name);$('#name').value=currentName();CUR=id;VIEW='char';viewPhase=null;pendingDel=null;return true}
+function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));if(!('orbLang' in e.S))S.orbLang='Ivinian';if(!S.nameV)migrateName(e.name);fixSw();$('#name').value=currentName();CUR=id;VIEW='char';viewPhase=null;pendingDel=null;return true}
 function addChar(roll){S=blank();S.step=ORDER[0];if(roll)rollAll();const id=newId();S.nameV=2;const nm=roll&&canName()?fullName():'';CHARS.unshift({id,name:nm,S:JSON.parse(JSON.stringify(S)),saved:Date.now(),sum:null});$('#name').value=nm;CUR=id;VIEW='char';viewPhase=null;pendingDel=null}
 function savedTxt(ts){const d0=x=>{const d=new Date(x);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()};const n=Math.round((d0(Date.now())-d0(ts))/864e5);return n<=0?'Today':n===1?'Yesterday':n<7?n+' days ago':new Date(ts).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
 function startScreen(){const rows=CHARS.slice().sort((a,b)=>b.saved-a.saved).map(c=>{const m=c.sum||{career:'',born:'',done:0};const nm=c.name?esc(c.name):'Unnamed';const no='<span class="empty">Not chosen</span>';
@@ -1207,7 +1256,7 @@ function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();con
  if(S.concept)L.push('','> '+S.concept);
  L.push('','## Origin');
  [...(ivK()?[['Kingdom',kingLabel(S.place)]]:[]),...(byOn()&&S.byname?[['Byname',S.byname]]:[]),['Clan',S.clan+(S.clan&&thrall()?' (owned by, not a member)':'')],...(patroOn()&&S.father?[['Father',S.father+' ('+patronymic()+')']]:[]),['Society',c],['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?statusVal():''],['Coin',S.cls?unesc(coinText()):''],
-  ['Family',[S.sibs?(S.sibs.n===1?'Only child':ord(S.sibs.rank)+' of '+S.sibs.n):'',S.parent,S.standing?S.standing+' in the clan':''].filter(Boolean).join(' · ')],['Travelled',S.travel?unesc(travelOut().label):''],['People',S.allies?(S.allies.join(' · ')||'None'):'']].forEach(([k,v])=>L.push('- **'+k+':** '+(v===''||v===null||v===undefined?nc:v)));
+  ['Family',[S.sibs?(S.sibs.n===1?'Only child':ord(S.sibs.rank)+' of '+S.sibs.n):'',S.parent,S.standing?S.standing+' in the clan':''].filter(Boolean).join(' · ')],['Travelled',S.travel?unesc(travelOut().label):''],['People',S.allies?(allyList().join(' · ')||'None'):'']].forEach(([k,v])=>L.push('- **'+k+':** '+(v===''||v===null||v===undefined?nc:v)));
  L.push('','## Attributes','| Max Resolve | Initiative | Toughness | Death Threshold | Lethality Level | Inventory slots |','|---|---|---|---|---|---|','| '+[A.res.val,'+'+A.init.val,A.tough.val,A.dt.val,A.ll.val,A.inv.val].join(' | ')+' |');
  const sk=k=>{const m=[S.ro.savvy.includes(k)?'S':'',ex[k]?'Ex'+Math.min(4,ex[k]+1):''].filter(Boolean).join(', ');return[cell(k+(m?' ('+m+')':'')),val(k)]};
  L.push('','## Skills');
@@ -1220,7 +1269,7 @@ function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();con
  if(orbP()==='Jarin')L.push('','Jarin in Orbaal. Rank above guildsman is rare there.');
  L.push('','## Aptitudes and talents');
  if(S.abil.length){L.push('- '+S.abil.map(a=>'**'+a.name+'**'+(a.desc?' ('+a.desc+')':'')).join(', '));Object.entries(talentSlots().reduce((m,[id,tn])=>{const k=tn+(subOf(id,tn)?': '+subOf(id,tn):'');m[k]=[tn,(m[k]?m[k][1]:0)+1];return m},{})).forEach(([k,[tn,n]])=>L.push('- **'+k+(n>1?' ×'+n:'')+'.** '+(TAL[tn]||'')))}else L.push(nc);
- L.push('','## Life events');const le=LIFET.filter(([k])=>S.life[k]);if(le.length)le.forEach(([k,n])=>{const l=S.life[k];L.push('- **'+lifeEv(k).name+'** ('+n.toLowerCase()+')'+([l.pick?unesc(grantLabel(l.pick)):'',l.rel?'a '+l.rel.toLowerCase():''].filter(Boolean).join(', ').replace(/^(.)/,': $1')))});else L.push(nc);
+ L.push('','## Life events');const le=LIFET.filter(([k])=>S.life[k]);if(le.length)le.forEach(([k,n])=>{const l=S.life[k];L.push('- **'+lifeEv(k).name+'** ('+n.toLowerCase()+')'+([l.pick?unesc(grantLabel(l.pick)):'',relText(l)].filter(Boolean).join(', ').replace(/^(.)/,': $1')))});else L.push(nc);
  L.push('','## Gear');if(S.gear.coin!==null)L.push((G.left<0?(-G.left)+'d overspent.':G.left+'d in hand.'),'');else L.push('Starting coin not rolled yet.','');
  L.push('- Dagger, damage 1, at hand');S.gear.items.forEach(x=>{const w=WMAP[x.n];L.push('- '+w[0]+', '+(w[1]==='Shield'?w[3]:'damage '+w[3])+', '+(x.hand?'at hand':'packed'))});G.pieces.forEach(x=>L.push('- '+x.n+': '+x.a[0]+', AP '+x.a[2]));S.gear.misc.forEach(n=>L.push('- '+n));
  L.push('');if(Object.keys(G.pn).length)L.push('In this armor: '+Object.entries(G.pn).map(([k,v])=>k+' −'+v).join(', ')+'.');L.push('Supply dice: Gear d12, Ammo d12, Rations d12, Medical d12.');
@@ -1238,6 +1287,11 @@ function download(id){const r=mdFor(id);if(!r)return;const fn=fileName(r.name);c
  try{const u=URL.createObjectURL(new Blob([r.md],{type:'text/markdown;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);say('Downloaded '+fn)}catch(e){say('The download did not go through. Try again.')}}
 const PDFLIB_URL='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',SHEET_URL='tbe-sheet.pdf';let pdfLibP=null,sheetP=null;
 function loadPdfLib(){if(window.PDFLib)return Promise.resolve(window.PDFLib);if(!pdfLibP)pdfLibP=new Promise((ok,no)=>{const s=document.createElement('script');s.src=PDFLIB_URL;s.onload=()=>window.PDFLib?ok(window.PDFLib):no(new Error('pdf-lib'));s.onerror=()=>no(new Error('pdf-lib'));document.head.appendChild(s)}).catch(e=>{pdfLibP=null;throw e});return pdfLibP}
+/* Page 3 is set in the app's own fonts (Grenze for headings and labels, Bitter for text), kept in the fonts folder beside the page and embedded with fontkit. If either can't load, page 3 falls back to Times. */
+const FONTKIT_URL='https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js',P3FONTS={head:'fonts/Grenze-Bold.ttf',label:'fonts/Grenze-SemiBold.ttf',body:'fonts/Bitter-Regular.ttf',bodyB:'fonts/Bitter-SemiBold.ttf'};let fontkitP=null,p3FontsP=null;
+function loadFontkit(){if(window.fontkit)return Promise.resolve(window.fontkit);if(!fontkitP)fontkitP=new Promise((ok,no)=>{const s=document.createElement('script');s.src=FONTKIT_URL;s.onload=()=>window.fontkit?ok(window.fontkit):no(new Error('fontkit'));s.onerror=()=>no(new Error('fontkit'));setTimeout(()=>no(new Error('fontkit timeout')),8000);document.head.appendChild(s)}).catch(e=>{fontkitP=null;throw e});return fontkitP}
+function loadP3Fonts(){if(!p3FontsP)p3FontsP=Promise.all(Object.entries(P3FONTS).map(([k,u])=>fetch(u).then(r=>{if(!r.ok)throw new Error(u);return r.arrayBuffer()}).then(b=>[k,b]))).then(Object.fromEntries).catch(e=>{p3FontsP=null;throw e});return p3FontsP}
+async function p3Fonts(doc,F){try{const[fk,B]=await Promise.all([loadFontkit(),loadP3Fonts()]);doc.registerFontkit(fk);const o={};for(const k of Object.keys(P3FONTS))o[k]=await doc.embedFont(B[k],{subset:true});o.ok=true;return o}catch(e){return{head:F.TiRo,label:F.TiRo,body:F.TiRo,bodyB:F.TiBo,ok:false}}}
 function loadSheet(){if(!sheetP)sheetP=fetch(SHEET_URL).then(r=>{if(!r.ok)throw new Error('sheet');return r.arrayBuffer()}).catch(e=>{sheetP=null;throw e});return sheetP}
 const PDFSK={'Dodge':['dodge','Savvy1_1'],'Melee: Light':['melee_light','Savvy1_2'],'Melee: Medium':['melee_medium','Savvy1_3'],'Melee: Heavy':['melee_heavy','Savvy1_4'],'Might':['might','Savvy1_5'],'Missile':['missile','Savvy1_6'],'Thrown':['thrown','Savvy1_7'],
  'Athletics':['athletics','Savvy2_1'],'Endurance':['endurance','Savvy2_2'],'Locks & Traps':['locks_traps','Savvy2_3'],'Perception':['perception','Savvy2_4'],'Ride':['ride','Savvy2_5'],'Sail/Boat':['sail_boat','Savvy2_6'],'Sleight of Hand':['sleight_of_hand','Savvy2_7'],'Stealth':['stealth','Savvy2_8'],'Survival':['survival','Savvy2_9'],'Track':['track','Savvy2_10'],'Willpower':['willpower','Savvy2_11'],
@@ -1252,7 +1306,7 @@ function pdfData(name){const V={},B=[],CAP={},N=[];const c=culture();const {led,
  const set=(k,v)=>{if(v!==''&&v!==null&&v!==undefined)V[k]=String(v)};const tot=k=>(led[k]||[]).reduce((a,q)=>a+q[0],0);
  set('name',name);set('page2_name',name);set('race',S.folk);set('sex',S.sex);if(ageSettled())set('age',ageYears());
  if(ivK())set('culture',kingBase(ivK())+' ('+(c==='Khuzan'?'Khuzan':'Ivinian')+')');else if(S.nation)set('culture',(S.nation==='tribal'?(S.place||'Tribal'):NAT[S.nation].name)+(c&&c!==NAT[S.nation].name?' ('+c+')':''));
- if(S.career){const cl=unesc(careerLine());set('previous_career',cl.length<=34?cl:S.career==='Spellweaver'?'Spellweaver'+(S.occ2&&S.occ2!=='Unaffiliated'?' ('+S.occ2+')':''):S.career==='Godbound'&&S.deity?'Godbound of '+S.deity:S.career)}
+ if(S.career){const cl=unesc(careerLine());set('previous_career',cl.length<=34?cl:S.career==='Spellweaver'?'Spellweaver'+(S.occ2?' ('+S.occ2+')':''):S.career==='Godbound'&&S.deity?'Godbound of '+S.deity:S.career)}
  S.abil.slice(0,3).forEach((a,i)=>set('ability_score_descriptor_'+(i+1),a.name+(a.desc?' ('+a.desc+')':'')));
  S.traits.forEach((x,i)=>i<3?set('personality_trait_'+(i+1),x):N.push('Trait: '+x));
  const mag=cdef()&&cdef().magic;
@@ -1270,12 +1324,12 @@ function pdfData(name){const V={},B=[],CAP={},N=[];const c=culture();const {led,
  if(G.shield){set('shield_size',G.shield[0]);set('shield_ap',G.shield[3].replace(/\s*AP$/,''));set('shield_enc',G.shield[4])}
  const wl=[{n:'Dagger',hand:true},...S.gear.items.filter(x=>WMAP[x.n][1]!=='Shield')];
  wl.forEach((x,i)=>{const w=WMAP[x.n];const note=[w[5],x.hand?'':'packed'].filter(Boolean).join(', ');if(i<4){const p='weapon_'+(i+1)+'_';set(p+'name_type',w[0]+' ('+w[1]+')');set(p+'att',skillVal(w[1]));set(p+'dmg',w[3]);set(p+'enc',w[4]);set(p+'notes',note)}else N.push('Weapon: '+w[0]+', '+w[1]+' '+skillVal(w[1])+', damage '+w[3]+', ENC '+w[4]+(note?', '+note:''))});
- LIFET.forEach(([k])=>{const l=S.life[k];if(!l)return;const e=lifeEv(k);set('life_'+k+'_1',[e.name,unesc(e.text),l.pick?'Gained: '+unesc(grantLabel(l.pick))+'.':'',l.rel?'Someone from this event: a '+l.rel.toLowerCase()+'.':''].filter(Boolean).join('\n'))});
+ LIFET.forEach(([k])=>{const l=S.life[k];if(!l)return;const e=lifeEv(k);set('life_'+k+'_1',[e.name,unesc(e.text),l.pick?'Gained: '+unesc(grantLabel(l.pick))+'.':'',l.rel?'Someone from this event: '+relText(l)+'.':''].filter(Boolean).join('\n'))});
  const gl=[...S.goals.filter(g=>g.kind==='individual'),...S.goals.filter(g=>g.kind!=='individual')];
  gl.forEach((g,i)=>{if(i<12){const f='goal_'+(i<6?'left_':'right_')+(i%6+1);set(f,g.text);if(g.kind!=='individual')B.push(f+'_shared')}else N.push('Goal'+(g.kind!=='individual'?' (shared)':'')+': '+g.text)});
  ['gear','ammo','rations','medical'].forEach(k=>set('supply_'+k,'d12'));
  if(S.gear.coin!==null)set('silver_pieces',G.left);if(S.cls)set('status',statusVal());
- const npc=[...LIFET.filter(([k])=>S.life[k]&&S.life[k].rel).map(([k])=>S.life[k].rel+' (from '+lifeEv(k).name+')'),...(S.allies||[])];
+ const npc=[...LIFET.filter(([k])=>S.life[k]&&S.life[k].rel).map(([k])=>S.life[k].rel+(S.life[k].relName?': '+S.life[k].relName:'')+' (from '+lifeEv(k).name+')'),...allyList()];
  npc.forEach((x,i)=>i<5?set('relationship_npc_'+(i+1),x):N.push('NPC: '+x));
  set('inventory_max_enc',A.inv.val);
  const inv=[...S.gear.items.filter(x=>!x.hand).map(x=>[x.n,WMAP[x.n][4]]),...S.gear.misc.map(n=>[n,MISC.find(m=>m[0]===n)[2]])];
@@ -1293,34 +1347,34 @@ function page3Data(){const c=culture();const t=tongues();const R=[];const has=v=
   ['Sunsign',ss?ss+(sg&&sg!==ss?', taking '+sg:''):''],['Its gifts',sg?'+10 '+k[0]+', +5 '+k[1]+' and '+k[2]:''],['Affinity',af?af[0].join(' and ')+' (+1 Mastery)':''],['Impedance',af?af[1].join(' and ')+' (+1 TC)':'']]);
  sec('Tongues and lore',[...t.L.map(l=>[l[0],String(l[1]),l[2]||'']),...t.W.map(w=>[w[0],String(w[1]),w[2]||''])],'value');
  return R}
-async function addPage3(doc,L,F,safe,name){const W=612,H=792,M=18,G=12,PW=Math.round((W-2*M-G)/3),LW=W-2*M-G-PW,TOP=700,BOT=28;
+async function addPage3(doc,L,F,safe,name){const T=await p3Fonts(doc,F);const W=612,H=792,M=18,G=12,PW=Math.round((W-2*M-G)/3),LW=W-2*M-G-PW,TOP=700,BOT=28;
  const red=L.rgb(.502,0,0),ink=L.rgb(.17,.17,.17),grey=L.rgb(.42,.42,.42),bar=L.rgb(.91,.91,.91),edge=L.rgb(.35,.35,.35);
  const head=await doc.embedPage(doc.getPages()[1],{left:0,bottom:719,right:W,top:H});
  const nw=(s,f,z)=>f.widthOfTextAtSize(safe(s,f),z);
  const wrap=(s,f,z,w)=>{const out=[];let ln='';safe(s,f).split(/\s+/).forEach(wd=>{const tr=ln?ln+' '+wd:wd;if(ln&&f.widthOfTextAtSize(tr,z)>w){out.push(ln);ln=wd}else ln=tr});if(ln)out.push(ln);return out.length?out:['']};
- const caps=(p,s,x,y,z)=>{let cx=x;[...s.toUpperCase()].forEach(ch=>{p.drawText(safe(ch,F.TiRo),{x:cx,y,size:z,font:F.TiRo,color:ink});cx+=F.TiRo.widthOfTextAtSize(safe(ch,F.TiRo),z)+z*0.08});return cx-x};
- const capsW=(s,z)=>[...s.toUpperCase()].reduce((a,ch)=>a+F.TiRo.widthOfTextAtSize(safe(ch,F.TiRo),z)+z*0.08,0);
+ const SP=T.ok?.06:.08;const caps=(p,s,x,y,z,f)=>{f=f||T.head;let cx=x;[...s.toUpperCase()].forEach(ch=>{p.drawText(safe(ch,f),{x:cx,y,size:z,font:f,color:ink});cx+=f.widthOfTextAtSize(safe(ch,f),z)+z*SP});return cx-x};
+ const capsW=(s,z,f)=>{f=f||T.head;return[...s.toUpperCase()].reduce((a,ch)=>a+f.widthOfTextAtSize(safe(ch,f),z)+z*SP,0)};
  /* A box in the sheet's style: rounded corners, the heading set into the top line. */
- const box=(p,x,top,w,h,title)=>{const r=8,tw=capsW(title,12.5);const path=`M ${r+tw+8} 0 L ${w-r} 0 Q ${w} 0 ${w} ${r} L ${w} ${h-r} Q ${w} ${h} ${w-r} ${h} L ${r} ${h} Q 0 ${h} 0 ${h-r} L 0 ${r} Q 0 0 ${r} 0`;
-  p.drawSvgPath(path,{x,y:top,borderColor:edge,borderWidth:.8});caps(p,title,x+r+2,top-4.3,12.5)};
- const newPage=()=>{const p=doc.addPage();p.setSize(W,H);p.drawPage(head,{x:0,y:719});if(name)p.drawText(safe(name,F.TiBo),{x:26,y:736,size:Math.min(15,15*170/Math.max(170,nw(name,F.TiBo,15))),font:F.TiBo,color:red});return p};
+ const HZ=T.ok?14:12.5;const box=(p,x,top,w,h,title)=>{const r=8,tw=capsW(title,HZ);const path=`M ${r+tw+8} 0 L ${w-r} 0 Q ${w} 0 ${w} ${r} L ${w} ${h-r} Q ${w} ${h} ${w-r} ${h} L ${r} ${h} Q 0 ${h} 0 ${h-r} L 0 ${r} Q 0 0 ${r} 0`;
+  p.drawSvgPath(path,{x,y:top,borderColor:edge,borderWidth:.8});caps(p,title,x+r+2,top-HZ*.34,HZ)};
+ const newPage=()=>{const p=doc.addPage();p.setSize(W,H);p.drawPage(head,{x:0,y:719});const NF=T.ok?T.head:F.TiBo;if(name)p.drawText(safe(name,NF),{x:26,y:736,size:Math.min(16,16*175/Math.max(175,nw(name,NF,16))),font:NF,color:red});return p};
  let p=newPage();
  /* Portrait, top right, a third of the page wide. */
  {const x=M+LW+G,iw=PW-14,ih=Math.round(iw*4/3),bh=ih+24;box(p,x,TOP,PW,bh,'Portrait');
   if(portOK(S.portrait)){try{const im=await doc.embedJpg(S.portrait);p.drawImage(im,{x:x+7,y:TOP-14-ih,width:iw,height:ih})}catch(e){}}
   else p.drawRectangle({x:x+7,y:TOP-14-ih,width:iw,height:ih,color:bar})}
- const LBL=82,VZ=10.5,LH=12.6,vw=LW-LBL-18;
- const rowH=(s,r)=>s.kind==='value'?LH+4:wrap(r[1],F.TiRo,VZ,vw).length*LH+4;
+ const LBL=82,VZ=T.ok?9.6:10.5,LH=12.6,vw=LW-LBL-18,BF=T.body,BBF=T.bodyB;
+ const rowH=(s,r)=>s.kind==='value'?LH+4:wrap(r[1],BF,VZ,vw).length*LH+4;
  let y=TOP;
  for(const s of R3()){let i=0,first=true;
   while(i<s.rows.length){const seg=[];let yy=y-17;while(i+seg.length<s.rows.length){const h=rowH(s,s.rows[i+seg.length]);if(yy-h<BOT+6)break;seg.push([s.rows[i+seg.length],yy,h]);yy-=h}
    const left=s.rows.length-i;if(seg.length<Math.min(2,left)){if(y===TOP){/* nothing fits on an empty page: should not happen */break}p=newPage();y=TOP;continue}
    box(p,M,y,LW,y-yy+6,first?s.h:s.h+', continued');
    seg.forEach(([r,ry,h],j)=>{if(j%2===0)p.drawRectangle({x:M+6,y:ry-h+1,width:LW-12,height:h-1,color:bar});
-    if(s.kind==='value'){const v=safe(r[1],F.TiBo),vx=M+LW-12-F.TiBo.widthOfTextAtSize(v,VZ);let nm=safe(r[0],F.TiRo);p.drawText(nm,{x:M+10,y:ry-LH+2,size:VZ,font:F.TiRo,color:red});
-     if(r[2]){let note=safe(r[2],F.TiRo);const nx=M+14+F.TiRo.widthOfTextAtSize(nm,VZ),room=vx-8-nx;while(note&&F.TiRo.widthOfTextAtSize(note,8)>room)note=note.slice(0,-2).trimEnd()+'…';if(room>20)p.drawText(note,{x:nx,y:ry-LH+2,size:8,font:F.TiRo,color:grey})}
-     p.drawText(v,{x:vx,y:ry-LH+2,size:VZ,font:F.TiBo,color:red})}
-    else{caps(p,r[0],M+10,ry-LH+2.5,7.2);wrap(r[1],F.TiRo,VZ,vw).forEach((ln,k)=>p.drawText(ln,{x:M+10+LBL,y:ry-LH+2-k*LH,size:VZ,font:F.TiRo,color:red}))}});
+    if(s.kind==='value'){const v=safe(r[1],BBF),vx=M+LW-12-BBF.widthOfTextAtSize(v,VZ);let nm=safe(r[0],BF);p.drawText(nm,{x:M+10,y:ry-LH+2,size:VZ,font:BF,color:red});
+     if(r[2]){const NZ=T.ok?7.4:8;let note=safe(r[2],BF);const nx=M+14+BF.widthOfTextAtSize(nm,VZ),room=vx-8-nx;while(note&&BF.widthOfTextAtSize(note,NZ)>room)note=note.slice(0,-2).trimEnd()+'…';if(room>20)p.drawText(note,{x:nx,y:ry-LH+2,size:NZ,font:BF,color:grey})}
+     p.drawText(v,{x:vx,y:ry-LH+2,size:VZ,font:BBF,color:red})}
+    else{if(T.ok)p.drawText(safe(r[0],T.label),{x:M+10,y:ry-LH+2,size:10,font:T.label,color:ink});else caps(p,r[0],M+10,ry-LH+2.5,7.2,F.TiRo);wrap(r[1],BF,VZ,vw).forEach((ln,k)=>p.drawText(ln,{x:M+10+LBL,y:ry-LH+2-k*LH,size:VZ,font:BF,color:red}))}});
    i+=seg.length;y=yy-6-16;first=false;if(i<s.rows.length){p=newPage();y=TOP}}}
  function R3(){return page3Data()}}
 async function makePdf(name){const[L,buf]=await Promise.all([loadPdfLib(),loadSheet()]);const doc=await L.PDFDocument.load(buf);const form=doc.getForm();
@@ -1421,6 +1475,7 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='inSet')S.inSet=v==='1';
   else if(a==='people'){S.people=S.people===v?'':v}
   else if(a==='cls'){S.cls=v;if(!occ())S.occ=''}
+  else if(a==='swpath'){if(S.swPath!==v){S.swPath=v;S.occ2=v==='pvar'?HANMAVAR:'';S.chantry=''}}
   else if(a==='ivc')setIvc(v,v==='great'&&S.chief);
   else if(a==='wealth')S.wealth=+v;
   else if(a==='bg'){if(S.bg!==v){S.bg=v;S.picks={}}}
@@ -1429,7 +1484,7 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='dual')S.dual=v?(S.dual||NATIONS.find(n=>!['tribal','other','evael',S.nation].includes(n.id)).id):'';
   else if(a==='age'){if(S.age!==v)S.years=null;S.age=v;S.ageSet=true}
   else if(a==='standing')S.standing=v;
-  else if(a==='roll'){if(v==='picks'){const keep=S.picks;R.picks();const b2=BG[S.bg];b2.slots.forEach(sl=>{if((keep[sl.id]||[]).length===sl.n)S.picks[sl.id]=keep[sl.id]});b2.slots.filter(x=>x.not).forEach(x=>{const taken=S.picks[x.not]||[];if((S.picks[x.id]||[]).some(y=>taken.includes(y))){const o=slotOpts(x).slice();const p=[];while(p.length<x.n&&o.length)p.push(o.splice(rnd(o.length)-1,1)[0]);S.picks[x.id]=p}})}else if(v.startsWith('life:'))R.life(v.slice(5));else if(v.startsWith('rel:'))S.life[v.slice(4)].rel=['Friend','Patron','Rival','Adversary'][rnd(4)-1];else R[v]()}}
+  else if(a==='roll'){if(v==='picks'){const keep=S.picks;R.picks();const b2=BG[S.bg];b2.slots.forEach(sl=>{if((keep[sl.id]||[]).length===sl.n)S.picks[sl.id]=keep[sl.id]});b2.slots.filter(x=>x.not).forEach(x=>{const taken=S.picks[x.not]||[];if((S.picks[x.id]||[]).some(y=>taken.includes(y))){const o=slotOpts(x).slice();const p=[];while(p.length<x.n&&o.length)p.push(o.splice(rnd(o.length)-1,1)[0]);S.picks[x.id]=p}})}else if(v.startsWith('life:'))R.life(v.slice(5));else if(v.startsWith('rel:'))S.life[v.slice(4)].rel=['Friend','Patron','Rival','Adversary'][rnd(4)-1];else if(v.startsWith('lname:'))S.life[v.slice(6)].relName=npcName();else if(v.startsWith('aname:')){if(!S.allyNames)S.allyNames=[];S.allyNames[+v.slice(6)]=npcName()}else R[v]()}}
  render()});
 document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.camp){const k=el.dataset.camp,lim={d:[1,30],m:[1,12],y:[1,9999]}[k];const v=Math.round(+el.value);GM[k]=Number.isFinite(v)?Math.min(lim[1],Math.max(lim[0],v)):{d:1,m:1,y:720}[k];el.value=GM[k];render();return}
@@ -1441,6 +1496,9 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.handname){S.handName=el.value.trim();render();return}
  if(el.dataset.prompt){const k=el.dataset.prompt;const gen=k==='pos'?promptText():ART_NEG;if(!S.prompt)S.prompt={pos:'',neg:''};S.prompt[k]=el.value.trim()===gen.trim()?'':el.value.trim();saveNow();const n=$('#promptnote');if(n)n.textContent=S.prompt.pos||S.prompt.neg?'Your edit is kept. Rebuild from character to start again from the character.':'';return}
  if(el.id==='portfile'){addPortrait(el.files&&el.files[0]);el.value='';return}
+ if(el.dataset.lname){const l=S.life[el.dataset.lname];if(l)l.relName=el.value.trim();render();return}
+ if(el.dataset.aname!==undefined){if(!S.allyNames)S.allyNames=[];S.allyNames[+el.dataset.aname]=el.value.trim();render();return}
+ if(el.dataset.chall){S.chAll=el.checked;render();return}
  if(el.dataset.chief){setIvc('great',el.checked);render();return}
  if(el.dataset.byon){nameEdit(()=>{S.byOn=el.checked});render();return}
  if(el.dataset.byname){nameEdit(()=>{S.byname=el.value.trim()});render();return}
