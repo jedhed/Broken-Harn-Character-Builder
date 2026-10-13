@@ -163,6 +163,7 @@ details.calls ol{color:var(--muted);max-width:75ch;padding-left:22px}
 .seg{display:inline-flex;border:1px solid var(--ink);border-radius:3px;overflow:hidden}
 .seg button{font:600 15.5px var(--head);border:0;background:var(--card);color:var(--ink);padding:3px 12px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--primary);color:var(--onp)}
+.formal{font:italic 500 15.5px var(--head);color:var(--muted);margin-top:2px}
 .savenote{font-size:13px;font-weight:600;color:var(--ok-t);min-height:1.2em}.savenote.bad{color:var(--bad-t)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .ents{display:flex;flex-direction:column;gap:7px}
@@ -240,6 +241,7 @@ td b{font:700 17.5px var(--head)}
       <div>
         <div class="eyebrow" id="eyebrow">Character roll · 720 TR</div>
         <input id="name" aria-label="Character name" placeholder="Name your character">
+        <div id="formal" class="formal" hidden></div>
         <div class="dlrow" id="namerow"><button class="btn roll" type="button" data-act="rollname">Roll a name</button></div>
         <div id="savenote" class="savenote" role="status"></div>
         <div class="dlrow"><button class="btn" type="button" data-act="dl">Download .md</button><button class="btn" type="button" id="pdfbtn" data-act="pdf">Download PDF</button><span id="dlnote" class="hint" role="status"></span></div>
@@ -773,12 +775,20 @@ const ivName=()=>orbP()==='Ivinian'||patroOn();
 function rollFather(){const s=nameSet(true);S.father=rollPart(s.given,s.cult)}
 function nameTail(){const p=patronymic();if(elder()||!S.clan)return p?' '+p:'';if(ivName())return(p?' '+p:'')+', of clan '+S.clan;return(S.cls==='noble'?' ':' of ')+S.clan}
 function rollClan(){const s=nameSet();if(s.clan)S.clan=rollPart(s.clan,s.cult)}
-function fullName(){const s=nameSet();if(!S.clan&&!elder())rollClan();if(patroOn()&&!S.father)rollFather();const g=rollPart(s.given,s.cult);return g+nameTail()}
+function fullName(){const s=nameSet();if(!S.clan&&!elder())rollClan();if(patroOn()&&!S.father)rollFather();const g=rollPart(s.given,s.cult);S.given=g;return everyday()}
+/* Bynames: an everyday name that takes precedence. With one, the name reads "Erik Halfhand" and the formal name (patronymic, clan) sits beneath it.
+   Ticked by default when a character has neither clan nor patronymic. */
+const byOn=()=>S.byOn===null?(!S.clan&&!patronymic()):!!S.byOn;
+const givenName=(n)=>{const v=(n!==undefined?n:($('#name')&&$('#name').value||'')).trim();return S.given&&v.startsWith(S.given)?S.given:(v.split(/\s+/)[0]||S.given||'')};
+const everyday=()=>{const g=givenName();return byOn()&&S.byname?g+' '+S.byname:g+nameTail()};
+const formalName=(n)=>byOn()&&S.byname&&(S.clan&&!elder()||patronymic())?givenName(n)+nameTail():'';
+function nameEdit(fn){const el=$('#name');const old=everyday();fn();if(!el.value.trim()||el.value===old)el.value=everyday()}
+function showFormal(){const f=$('#formal');if(!f)return;const t=formalName();f.textContent=t;f.hidden=!t}
 /* When the father changes, swap the old patronymic in the name box for the new one. */
 function setFather(v){const old=patronymic();S.father=v;const nw=patronymic();const el=$('#name');if(old&&nw&&el.value.includes(old)){el.value=el.value.replace(old,nw)}}
 
 /* ---------- state ---------- */
-const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,occ2:'',cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
+const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,occ2:'',cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
 let S=blank();
 const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true};
 const AGE_R={Young:[20,29],Adult:[30,49],Old:[50,69]};
@@ -944,6 +954,7 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
   ${S.people==='Jarin'?`<p class="note">${STIGMA_JARIN}</p>`:''}`:''}
   ${n&&S.place&&!elder()?`<div class="field"><div class="lab"><label for="clan"><b>Clan</b> <span class="hint">everyone belongs to one. A noble bears its name; anyone else is “of” it.</span></label>${rollBtn('clan','Roll a clan')}</div><input class="text" id="clan" data-set="clan" value="${esc(S.clan)}" placeholder="Your clan's name"><span class="hint">Half of rolled clans come from the lists for ${S.nation==='tribal'?'the Jarin':S.nation==='orbaal'?'Orbaal':esc(n.name)}, and half are invented in the same style.</span></div>`:''}
   ${n&&S.place&&patroAllowed()?`<div class="field"><div class="lab"><label for="father"><b>Father's name</b> <span class="hint">for a patronymic: -sen for a son, -dedt for a daughter</span></label>${patroOn()?rollBtn('father','Roll a name'):''}</div>${orbP()==='Ivinian'?'':`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="patro" data-patro="1" ${patroOn()?'checked':''}> Use a patronymic, in the Ivinian way</label>`}${orbP()==='Ivinian'?`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="patro" data-patro="1" ${patroOn()?'checked':''}> Use a patronymic (usual for Ivinians)</label>`:''}${patroOn()?`<input class="text" id="father" data-father="1" value="${esc(S.father)}" placeholder="Your father's given name"><span class="hint">${S.father?`Your patronymic is <b>${esc(patronymic())}</b>.`:'Roll or type a name to make your patronymic.'}</span>`:''}</div>`:''}
+  ${n&&S.place?`<div class="field"><div class="lab"><span><b>Byname</b> <span class="hint">an everyday name or nickname. It takes the place of the clan and patronymic in everyday use.</span></span></div><label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="byon" data-byon="1" ${byOn()?'checked':''}> Use a byname</label>${byOn()?`<input class="text" id="byname" data-byname="1" value="${esc(S.byname)}" placeholder="Halfhand, or the Red"><span class="hint">${S.byname?`Everyday name: <b>${esc(everyday())}</b>${formalName()?` · formal name: ${esc(formalName())}`:''}`:'Type it as it should read. Include “the” if it takes one.'}</span>`:''}</div>`:''}
   ${c?`<div class="result">Society: <b>${c}</b> · Surroundings: <b>${env()}</b></div>`:''}`}
  if(S.step===2){const w=classW();const tot=Object.values(w).reduce((a,b)=>a+b,0);const ol=occList();const o=occ();
   h=`<header><h2>Station</h2><p>The class you were born into and the trade of the household that raised you. ${c?`These are the classes of ${c} society.`:''}</p></header>${warn}
@@ -1036,7 +1047,7 @@ function steps(){const I=issues();const bad=i=>(I[i]||[]).length>0;const cur=pha
  $('#steps').innerHTML=`<div class="phases" role="tablist">${PHASES.map(([n,,sh],k)=>{const st=phaseSteps(k),d=st.filter(i=>done(i)&&!bad(i)).length,b=st.filter(bad).length;return`<button type="button" class="phase" role="tab" aria-selected="${k===vp}" data-act="phase" data-val="${k}" aria-label="${n}"><span class="pfull">${n}</span><span class="pshort">${sh}</span> <span class="cnt ${b?'bad':d===st.length?'ok':'warn'}">${d} of ${st.length}${b?' · '+b+' to fix':''}</span></button>`}).join('')}</div>
  <div class="steps">${phaseSteps(vp).map(i=>{const now=S.step===i;const m=bad(i)?'bad':now?'now':done(i)?'done':'';return`<button class="step" data-act="go" data-val="${i}" ${now?'aria-current="step"':''}><span class="mark ${m}" title="${bad(i)?'Needs another look':done(i)?'Complete':'Not finished'}"></span>${STEPS[i]}${bad(i)?'<span class="sr"> (needs another look)</span>':''}</button>`}).join('')}</div>`}
 function sheet(){const c=culture();const o=occ();const t=tongues();const {led,ex}=ledger();const e='<span class="empty">not chosen</span>';
- const id=`<dl>${S.concept?`<dt>Concept</dt><dd>${esc(S.concept)}</dd>`:''}${S.career?`<dt>Career</dt><dd>${careerLine()}</dd>`:''}<dt>Folk</dt><dd>${S.folk}${S.sex?', '+S.sex.toLowerCase():''}${orbP()?', '+orbP():''}</dd><dt>Born</dt><dd>${S.place?(S.nation==='tribal'?'Among the '+S.place:(S.inSet?S.place:'A village near '+S.place)+', '+NAT[S.nation].name):e}</dd>${S.clan?`<dt>Clan</dt><dd>${esc(S.clan)}</dd>`:''}${patroOn()&&S.father?`<dt>Father</dt><dd>${esc(S.father)} <span class="empty">(${esc(patronymic())})</span></dd>`:''}<dt>Society</dt><dd>${c||e}</dd><dt>Class</dt><dd>${S.cls?CLASSES[S.cls]:e}</dd><dt>Family trade</dt><dd>${S.occ||e}</dd><dt>Upbringing</dt><dd>${S.bg?BG[S.bg].name:e}</dd><dt>Status</dt><dd>${S.cls?statusVal():e}</dd><dt>Coin</dt><dd>${S.cls?coinText():e}</dd></dl>`;
+ const id=`<dl>${S.concept?`<dt>Concept</dt><dd>${esc(S.concept)}</dd>`:''}${S.career?`<dt>Career</dt><dd>${careerLine()}</dd>`:''}<dt>Folk</dt><dd>${S.folk}${S.sex?', '+S.sex.toLowerCase():''}${orbP()?', '+orbP():''}</dd><dt>Born</dt><dd>${S.place?(S.nation==='tribal'?'Among the '+S.place:(S.inSet?S.place:'A village near '+S.place)+', '+NAT[S.nation].name):e}</dd>${S.clan?`<dt>Clan</dt><dd>${esc(S.clan)}</dd>`:''}${byOn()&&S.byname?`<dt>Byname</dt><dd>${esc(S.byname)}</dd>`:''}${patroOn()&&S.father?`<dt>Father</dt><dd>${esc(S.father)} <span class="empty">(${esc(patronymic())})</span></dd>`:''}<dt>Society</dt><dd>${c||e}</dd><dt>Class</dt><dd>${S.cls?CLASSES[S.cls]:e}</dd><dt>Family trade</dt><dd>${S.occ||e}</dd><dt>Upbringing</dt><dd>${S.bg?BG[S.bg].name:e}</dd><dt>Status</dt><dd>${S.cls?statusVal():e}</dd><dt>Coin</dt><dd>${S.cls?coinText():e}</dd></dl>`;
  const lang=`<div class="sec"><h3>Tongues and lore</h3><div class="rows stripe">${t.L.length?t.L.concat(t.W).map(l=>`<div class="row"><span>${l[0]} ${l[2]?`<small>${l[2]}</small>`:''}</span><span>${l[1]}</span></div>`).join(''):e}</div>${S.dual?`<p class="note">${tribalFamily()&&S.nation!=='tribal'?'Tribal family. Expect prejudice in the kingdoms, and little hope of rank above the unguilded.':orbMixed()?'Of both peoples of Orbaal.':'Family from elsewhere. Rank above guildsman is rare.'}</p>`:''}${orbP()==='Jarin'?'<p class="note">Jarin in Orbaal. Rank above guildsman is rare there.</p>':''}</div>`;
  const tl=talentCounts();const A=attrs();
  const atr=`<div class="sec"><h3>Attributes ${atLeft()?`<span class="cnt ${atLeft()<0?'bad':'warn'}">${atLeft()<0?(-atLeft())+' over':atLeft()+' points to spend'}</span>`:''}</h3><div class="rows stripe">${[A.res,A.init,A.tough,A.dt,A.ll,A.inv].map(x=>`<div class="row" title="${atBreak(x)}"><span>${x.name}${x.parts.length>1?` <small>${atBreak(x)}</small>`:''}</span><span>${x.name==='Initiative'?'+':''}${x.val}</span></div>`).join('')}</div></div>`;
@@ -1085,13 +1096,13 @@ const b64=t=>{const u=new TextEncoder().encode(t);let o='';for(let i=0;i<u.lengt
 const fileName=n=>((n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'unnamed-character')+'.md';
 function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();const {led,ex}=ledger();const A=attrs();const G=gearCalc();const t=tongues();
  const val=k=>Math.max(0,Math.min(70,(led[k]||[]).reduce((a,q)=>a+q[0],0)));
- L.push('# '+(name||'Unnamed character'),'');
+ L.push('# '+(name||'Unnamed character'),'');if(formalName(name||''))L.push('*'+formalName(name||'')+'*','');
  L.push([S.career?unesc(careerLine()):'',S.folk+(S.sex?', '+S.sex.toLowerCase():'')+(orbP()?', '+orbP():''),ageSettled()?S.age+', '+ageYears():''].filter(Boolean).join(' · '));
  const place=S.place?(S.nation==='tribal'?'among the '+S.place:(S.inSet?S.place:'a village near '+S.place)+', '+NAT[S.nation].name):'';
  if(S.birth||place)L.push('Born '+[S.birth?S.birth.d+' '+MONTHS[S.birth.m-1]+(ageSettled()?' '+yearTxt(birthYear()):'')+' ('+sunsign(S.birth)+')':'',place].filter(Boolean).join(', '));
  if(S.concept)L.push('','> '+S.concept);
  L.push('','## Origin');
- [['Clan',S.clan],...(patroOn()&&S.father?[['Father',S.father+' ('+patronymic()+')']]:[]),['Society',c],['Class',S.cls?CLASSES[S.cls]:''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?statusVal():''],['Coin',S.cls?unesc(coinText()):''],
+ [...(byOn()&&S.byname?[['Byname',S.byname]]:[]),['Clan',S.clan],...(patroOn()&&S.father?[['Father',S.father+' ('+patronymic()+')']]:[]),['Society',c],['Class',S.cls?CLASSES[S.cls]:''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?statusVal():''],['Coin',S.cls?unesc(coinText()):''],
   ['Family',[S.sibs?(S.sibs.n===1?'Only child':ord(S.sibs.rank)+' of '+S.sibs.n):'',S.parent,S.standing?S.standing+' in the clan':''].filter(Boolean).join(' · ')],['Travelled',S.travel?unesc(travelOut().label):''],['People',S.allies?(S.allies.join(' · ')||'None'):'']].forEach(([k,v])=>L.push('- **'+k+':** '+(v===''||v===null||v===undefined?nc:v)));
  L.push('','## Attributes','| Max Resolve | Initiative | Toughness | Death Threshold | Lethality Level | Inventory slots |','|---|---|---|---|---|---|','| '+[A.res.val,'+'+A.init.val,A.tough.val,A.dt.val,A.ll.val,A.inv.val].join(' | ')+' |');
  const sk=k=>{const m=[S.ro.savvy.includes(k)?'S':'',ex[k]?'Ex'+Math.min(4,ex[k]+1):''].filter(Boolean).join(', ');return[cell(k+(m?' ('+m+')':'')),val(k)]};
@@ -1200,7 +1211,7 @@ function importChar(text){finMsg=null;const r=readCharFile(text);if(r.err){loadM
 function syncGM(){$('#eyebrow').textContent='Character roll · '+yearTxt(GM.y);const m=$('#camp-m');if(!m.options.length)m.innerHTML=MONTHS.map((n,i)=>`<option value="${i+1}">${n}</option>`).join('');const set=(el,v)=>{if(document.activeElement!==el)el.value=v};set($('#camp-d'),GM.d);set(m,GM.m);set($('#camp-y'),GM.y);$('#gm-sindarin').checked=!!GM.Sindarin;$('#gm-khuzdul').checked=!!GM.Khuzdul;$('#gm-accents').checked=GM.accents!==false}
 function render(){syncGM();const st=VIEW==='start';$('#start').hidden=!st;$('#steps').hidden=st;$('#cols').hidden=st;$('#lnk-chars').hidden=st;document.querySelector('.banner').classList.toggle('inchar',!st);
  if(st){$('#sect').textContent='Characters';store();startScreen();return}
- ageSettled();$('#sect').textContent=STEPS[S.step];steps();panel();sheet();saveNow()}
+ ageSettled();$('#sect').textContent=STEPS[S.step];steps();panel();sheet();showFormal();saveNow()}
 
 /* ---------- events ---------- */
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.val;
@@ -1274,6 +1285,8 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.years!==undefined){S.years=+el.value;S.ageSet=true;render();return}if(el.dataset.gm){GM[el.dataset.gm]=el.checked;if(!el.checked&&S.folk===el.dataset.gm)S.folk='Human';render();return}
  if(el.dataset.adesc!==undefined){S.abil[+el.dataset.adesc].desc=el.value.trim();render();return}
  if(el.dataset.patro){S.patro=el.checked;render();return}
+ if(el.dataset.byon){nameEdit(()=>{S.byOn=el.checked});render();return}
+ if(el.dataset.byname){nameEdit(()=>{S.byname=el.value.trim()});render();return}
  if(el.dataset.father){setFather(el.value.trim());render();return}
  if(el.dataset.tsub!==undefined){S.tsub[el.dataset.tsub]=el.value;render();return}
  if(el.dataset.arm){S.gear.armor[el.dataset.arm]=el.value;render();return}
@@ -1290,7 +1303,7 @@ document.addEventListener('change',ev=>{const el=ev.target;
  const k=el.dataset.set;if(!k)return;S[k]=el.value;if(k==='place')S.inSet=false;if(k==='deity'&&S.role!=='lay'&&!(FAITH[S.deity]||{})[S.role])S.role='lay';render()});
 
 loadSaved();if(!(CUR&&openChar(CUR)))VIEW='start';render();
-$('#name').addEventListener('input',saveNow);
+$('#name').addEventListener('input',()=>{saveNow();showFormal()});
 $('#filein').addEventListener('change',ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;if(f.size>2e6){loadMsg=[false,'That file is too large to be a character file.'];render();return}const r=new FileReader();r.onload=()=>importChar(String(r.result));r.onerror=()=>{loadMsg=[false,'That file could not be read.'];render()};r.readAsText(f)});
 document.addEventListener('input',ev=>{if(ev.target.id==='years'){$('#yearsOut').textContent=ev.target.value;$('#bornOut').innerHTML=bornLine(+ev.target.value);return}if(!['gwant','gblock','gdo'].includes(ev.target.id))return;const t=goalText(),el=$('#gprev');el.hidden=!t;el.innerHTML=t?'<b>Your goal will read</b>'+esc(t):''});
 </script>
