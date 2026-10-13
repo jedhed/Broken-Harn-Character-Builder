@@ -166,7 +166,7 @@ details.calls ol{color:var(--muted);max-width:75ch;padding-left:22px}
 .seg button[aria-pressed="true"]{background:var(--primary);color:var(--onp)}
 .portwrap{width:150px;padding:4px;border:1px solid var(--ink);background:var(--card);box-shadow:3px 3px 0 var(--hair)}.portwrap img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}.portwrap.side{margin:6px 0 4px}.portrow{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}textarea.text{resize:vertical;font:inherit;line-height:1.4;min-height:4.5em}textarea.tall{min-height:9em}
 .formal{font:italic 500 15.5px var(--head);color:var(--muted);margin-top:2px}
-.lkrows{display:flex;flex-direction:column}.lkrow{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--hair)}.lkctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0}.lkctl .hint{flex-basis:100%}.lkctl .hint.lkunit{flex-basis:auto}input.text.lknum{width:5.5em}input.text.lkword{width:auto;flex:1;min-width:120px;max-width:200px}button.link.sm{font:600 14px var(--body)}@media (max-width:600px){.lkrow{grid-template-columns:1fr}}
+.lkrows{display:flex;flex-direction:column}.lkrow{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--hair)}.lkctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0}.lkctl .hint{flex-basis:100%}.lkctl .hint.lkunit{flex-basis:auto}input.text.lknum{width:5.5em}input.text.lkword{width:auto;flex:1;min-width:120px;max-width:200px}button.link:disabled{color:var(--muted);text-decoration:none;cursor:not-allowed}button.link.sm{font:600 14px var(--body)}@media (max-width:600px){.lkrow{grid-template-columns:1fr}}
 .savenote{font-size:13px;font-weight:600;color:var(--ok-t);min-height:1.2em}.savenote.bad{color:var(--bad-t)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .ents{display:flex;flex-direction:column;gap:7px}
@@ -225,6 +225,8 @@ td b{font:700 17.5px var(--head)}
         <label><input type="checkbox" id="gm-khuzdul" data-gm="Khuzdul"> Khuzdul</label>
         <b style="margin-top:6px">Names</b>
         <label><input type="checkbox" id="gm-accents" data-gm="accents"> Accents on invented names</label>
+        <b style="margin-top:6px">Character sheets</b>
+        <label><input type="checkbox" id="gm-pdfdraft" data-gm="pdfDraft"> Allow PDFs of unfinished characters</label>
         <b style="margin-top:6px">Campaign start</b>
         <span class="hint">Ages are counted as of this date.</span>
         <div class="camp"><input class="text" type="number" id="camp-d" data-camp="d" min="1" max="30" aria-label="Day"><select id="camp-m" data-camp="m" aria-label="Month"></select><input class="text" type="number" id="camp-y" data-camp="y" min="1" max="9999" aria-label="Year"><span>TR</span></div>
@@ -247,7 +249,7 @@ td b{font:700 17.5px var(--head)}
         <div id="formal" class="formal" hidden></div>
         <div id="portwrap" class="portwrap side" hidden><img id="portimg" alt="Character portrait"></div>
         <div id="savenote" class="savenote" role="status"></div>
-        <div class="dlrow"><button class="btn" type="button" data-act="dl">Download .md</button><button class="btn" type="button" id="pdfbtn" data-act="pdf">Download PDF</button><span id="dlnote" class="hint" role="status"></span></div>
+        <div class="dlrow"><button class="btn" type="button" data-act="dl">Download .md</button><button class="btn" type="button" id="pdfbtn" data-act="pdf">Download PDF</button><span id="pdfgate" class="hint"></span><span id="dlnote" class="hint" role="status"></span></div>
       </div>
       <div id="sheet" style="display:flex;flex-direction:column;gap:14px"></div>
     </aside>
@@ -1039,7 +1041,7 @@ function setFather(v){S.father=v}
 /* ---------- state ---------- */
 const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
 let S=blank();
-const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true};
+const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true,pdfDraft:false};
 const AGE_R={Young:[20,29],Adult:[30,49],Old:[50,69]};
 const ageMid=()=>{const[lo,hi]=AGE_R[S.age];return Math.round((lo+hi)/2)};
 const ageYears=()=>{const[lo,hi]=AGE_R[S.age];return Number.isInteger(S.years)&&S.years>=lo&&S.years<=hi?S.years:ageMid()};
@@ -1341,15 +1343,15 @@ function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;S=Obje
 function addChar(roll){S=blank();S.step=ORDER[0];if(roll)rollAll();const id=newId();S.nameV=2;const nm=roll&&canName()?fullName():'';CHARS.unshift({id,name:nm,S:JSON.parse(JSON.stringify(S)),saved:Date.now(),sum:null});$('#name').value=nm;CUR=id;VIEW='char';viewPhase=null;pendingDel=null}
 function savedTxt(ts){const d0=x=>{const d=new Date(x);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()};const n=Math.round((d0(Date.now())-d0(ts))/864e5);return n<=0?'Today':n===1?'Yesterday':n<7?n+' days ago':new Date(ts).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
 function startScreen(){const rows=CHARS.slice().sort((a,b)=>b.saved-a.saved).map(c=>{const m=c.sum||{career:'',born:'',done:0};const nm=c.name?esc(c.name):'Unnamed';const no='<span class="empty">Not chosen</span>';
-  return`<tr><td><b>${nm}</b></td><td>${m.career||no}</td><td>${m.born||no}</td><td><span class="cnt ${m.done===ORDER.length?'ok':'warn'}">${m.done} of ${ORDER.length} steps</span></td><td>${savedTxt(c.saved)}</td><td class="act">${pendingDel===c.id?`<span class="err">Delete ${nm}?</span><button class="btn" data-act="delyes" data-val="${c.id}">Delete</button><button class="link" data-act="delno">Cancel</button>`:`<button class="btn" data-act="open" data-val="${c.id}">Open</button><button class="link" data-act="dl" data-val="${c.id}" aria-label="Download ${nm}">Download</button><button class="link" data-act="del" data-val="${c.id}" aria-label="Delete ${nm}">Delete</button>`}</td></tr>`}).join('');
- const fin=finMsg&&CHARS.some(c=>c.id===finMsg.id)?`<div class="notice fin" role="status"><span>${finMsg.todo.length?`<b>${esc(finMsg.name)}</b> is saved, with ${finMsg.todo.length} ${finMsg.todo.length===1?'step':'steps'} unfinished: ${finMsg.todo.join(', ')}.`:`<b>${esc(finMsg.name)}</b> is finished and saved in this browser. Download the file to keep a copy or to send to your GM.`}</span><span class="chips">${finMsg.todo.length?`<button class="btn" data-act="open" data-val="${finMsg.id}">Go back to it</button><button class="btn" data-act="dl" data-val="${finMsg.id}">Download anyway</button>`:`<button class="btn primary" data-act="dl" data-val="${finMsg.id}">Download .md</button>`}</span></div>`:'';
+  return`<tr><td><b>${nm}</b></td><td>${m.career||no}</td><td>${m.born||no}</td><td><span class="cnt ${m.done===ORDER.length?'ok':'warn'}">${m.done} of ${ORDER.length} steps</span></td><td>${savedTxt(c.saved)}</td><td class="act">${pendingDel===c.id?`<span class="err">Delete ${nm}?</span><button class="btn" data-act="delyes" data-val="${c.id}">Delete</button><button class="link" data-act="delno">Cancel</button>`:`<button class="btn" data-act="open" data-val="${c.id}">Open</button><button class="link" data-act="dl" data-val="${c.id}" aria-label="Download ${nm} as .md">Download .md</button>${pdfOk(c.id)?`<button class="link" data-act="pdf" data-val="${c.id}" aria-label="Download ${nm} as PDF" ${pdfBusy?'disabled':''}>Download PDF</button>`:`<button class="link" disabled title="${pdfWhy(c.id)}" aria-label="Download ${nm} as PDF. ${pdfWhy(c.id)}">Download PDF</button>`}<button class="link" data-act="del" data-val="${c.id}" aria-label="Delete ${nm}">Delete</button>`}</td></tr>`}).join('');
+ const fin=finMsg&&CHARS.some(c=>c.id===finMsg.id)?`<div class="notice fin" role="status"><span>${finMsg.todo.length?`<b>${esc(finMsg.name)}</b> is saved, with ${finMsg.todo.length} ${finMsg.todo.length===1?'step':'steps'} unfinished: ${finMsg.todo.join(', ')}.`:`<b>${esc(finMsg.name)}</b> is finished and saved in this browser. Download the file to keep a copy or to send to your GM.`}</span><span class="chips">${finMsg.todo.length?`<button class="btn" data-act="open" data-val="${finMsg.id}">Go back to it</button><button class="btn" data-act="dl" data-val="${finMsg.id}">Download .md anyway</button>${GM.pdfDraft?`<button class="btn" data-act="pdf" data-val="${finMsg.id}" ${pdfBusy?'disabled':''}>Download PDF anyway</button>`:''}`:`<button class="btn primary" data-act="dl" data-val="${finMsg.id}">Download .md</button><button class="btn" data-act="pdf" data-val="${finMsg.id}" ${pdfBusy?'disabled':''}>Download PDF</button>`}</span></div>`:'';
  $('#start').innerHTML=`${fin}<p class="instr">Make a character for the Broken Empires rules, set on Hârn. Work through origin, career and gear one step at a time, choosing or rolling at every point. Your work is saved in this browser, and you can download any character as a file.</p>
  <div class="field"><div class="lab"><b>Begin</b></div><div class="begin">
   <div class="bcard"><h3>New character</h3><span>Start at Concept and make each choice yourself.</span><button class="btn primary" data-act="newchar">New character</button></div>
   <div class="bcard"><h3>Roll a whole origin</h3><span>Let the dice fill every step, then change what you like.</span><button class="btn roll" data-act="rollchar">Roll a whole origin</button></div>
   <div class="bcard"><h3>Load a character file</h3><span>Open a .md file you downloaded earlier.</span><button class="btn" data-act="pickfile">Choose a file</button>${loadMsg?`<span class="${loadMsg[0]?'hint':'err'}" role="status">${esc(loadMsg[1])}</span>`:''}</div>
  </div></div>
- <div class="field"><div class="lab"><b>Your characters</b></div>${CHARS.length?`<div class="scroll"><table><thead><tr><th>Name</th><th>Career</th><th>Born</th><th>Progress</th><th>Saved</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="result">No characters yet. Begin one above.</div>'}
+ <div class="field"><div class="lab"><b>Your characters</b></div>${CHARS.length?`<div class="scroll"><table><thead><tr><th>Name</th><th>Career</th><th>Born</th><th>Progress</th><th>Saved</th><th></th></tr></thead><tbody>${rows}</tbody></table></div><div id="listnote" class="hint" role="status">${esc(listNote)}</div>`:'<div class="result">No characters yet. Begin one above.</div>'}
  ${saveOK===false?'<div class="warnbox">This browser is blocking storage, so characters will not be kept after you close the page.</div>':''}</div>`}
 
 /* ---------- download as Markdown ---------- */
@@ -1393,7 +1395,7 @@ function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();con
  return L.join('\n')}
 function mdFor(id){if(VIEW==='char'&&id===CUR)return{name:$('#name').value,md:charMd($('#name').value)};const e=CHARS.find(c=>c.id===id);if(!e)return null;const keep=S;try{S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));return{name:e.name,md:charMd(e.name)}}finally{S=keep}}
 let DL=null;try{if(window.claude&&window.claude.use)window.claude.use('downloads').then(d=>{DL=d}).catch(()=>{})}catch(e){}
-function download(id){const r=mdFor(id);if(!r)return;const fn=fileName(r.name);const say=m=>{const n=$('#dlnote');if(n)n.textContent=m};
+function download(id){const r=mdFor(id);if(!r)return;const fn=fileName(r.name);const say=m=>{if(VIEW==='start'){listNote=m;const n=$('#listnote');if(n)n.textContent=m;return}const n=$('#dlnote');if(n)n.textContent=m};
  if(DL){DL.save({filename:fn,data:r.md}).then(()=>say('Downloaded '+fn)).catch(e=>{if(!e||e.code!=='declined')say('The download did not go through. Try again.')});return}
  try{const u=URL.createObjectURL(new Blob([r.md],{type:'text/markdown;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);say('Downloaded '+fn)}catch(e){say('The download did not go through. Try again.')}}
 const PDFLIB_URL='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',SHEET_URL='tbe-sheet.pdf';let pdfLibP=null,sheetP=null;
@@ -1505,12 +1507,23 @@ async function makePdf(name){const[L,buf]=await Promise.all([loadPdfLib(),loadSh
  Object.entries(D.CAP).forEach(([k,cap])=>{try{const b=form.getButton(k);b.acroField.getWidgets().forEach(w=>{w.dict.delete(L.PDFName.of('BS'));w.getOrCreateAppearanceCharacteristics().setCaptions({normal:cap})});b.updateAppearances(F.TiBo)}catch(e){}});
  try{await addPage3(doc,L,F,safe,name)}catch(e){lost.push('page 3 ('+(e&&e.message||'error')+')')}
  return{bytes:await doc.save({updateFieldAppearances:false}),lost}}
-async function downloadPdf(){const nm=$('#name').value;const fn=fileName(nm).replace(/\.md$/,'.pdf');const say=m=>{const n=$('#dlnote');if(n)n.textContent=m};const btn=$('#pdfbtn');if(btn)btn.disabled=true;say('Preparing PDF…');
- let r;try{r=await makePdf(nm)}catch(e){say('The PDF could not be made. Check your connection and try again.');if(btn)btn.disabled=false;return}
+/* A PDF is the sheet for play, so it waits until every step is done with no warnings (the Finish test), unless the GM allows drafts. */
+function withChar(id,fn){if(VIEW==='char'&&id===CUR)return fn();const e=CHARS.find(c=>c.id===id);if(!e)return null;const keep=S;try{S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));return fn()}finally{S=keep}}
+const stepsLeft=id=>withChar(id,()=>{const I=issues();return ORDER.filter(i=>!done(i)||(I[i]||[]).length).length});
+const pdfOk=id=>!!GM.pdfDraft||stepsLeft(id)===0;
+const pdfWhy=id=>{const n=stepsLeft(id);return'Finish all steps for a PDF ('+n+' left)'};
+let pdfBusy=false,listNote='';
+function pdfGate(){const b=$('#pdfbtn'),g=$('#pdfgate');if(!b)return;const ok=pdfOk(CUR);b.disabled=pdfBusy||!ok;if(g)g.textContent=ok?'':pdfWhy(CUR)}
+async function downloadPdf(id){const fromList=VIEW==='start';id=id||CUR;const e=CHARS.find(c=>c.id===id);if(fromList&&!e)return;if(pdfBusy||!pdfOk(id))return;
+ const nm=fromList?(e.name||''):$('#name').value;const fn=fileName(nm).replace(/\.md$/,'.pdf');
+ const say=m=>{if(fromList){listNote=m;const n=$('#listnote');if(n)n.textContent=m}else{const n=$('#dlnote');if(n)n.textContent=m}};
+ const btn=fromList?null:$('#pdfbtn');pdfBusy=true;if(btn)btn.disabled=true;if(fromList)render();say('Preparing PDF…');
+ const keep=S;let r;try{if(fromList)S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));r=await makePdf(nm)}catch(err){r=null}finally{if(fromList)S=keep}
+ if(!r){say('The PDF could not be made. Check your connection and try again.');pdfBusy=false;if(fromList)render();else pdfGate();return}
  const done=()=>say('Downloaded '+fn+(r.lost.length?'. '+r.lost.length+(r.lost.length===1?' entry':' entries')+' did not fit in Notes and were left off: '+r.lost.join('; ')+'.':''));
  try{if(DL){await DL.save({filename:fn,data:r.bytes});done()}else{const u=URL.createObjectURL(new Blob([r.bytes],{type:'application/pdf'}));const a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);done()}}
  catch(e){say(e&&e.code==='declined'?'':'The download did not go through. Try again.')}
- if(btn)btn.disabled=false}
+ pdfBusy=false;if(fromList)render();else pdfGate()}
 let loadMsg=null;
 const clean=x=>typeof x==='string'?x.replace(/[<>]/g,''):Array.isArray(x)?x.map(clean):x&&typeof x==='object'?Object.fromEntries(Object.entries(x).map(([k,v])=>[clean(k),clean(v)])):x;
 function readCharFile(text){const m=/<!--\s*broken-harn-data v(\d+)[^\n]*\n(?:[^\n]*\n)?([A-Za-z0-9+\/=\s]+?)-->/.exec(text);if(!m)return{err:'That file has no Broken Hârn character data in it. Choose a file downloaded from this app.'};
@@ -1521,15 +1534,16 @@ function readCharFile(text){const m=/<!--\s*broken-harn-data v(\d+)[^\n]*\n(?:[^
 function importChar(text){finMsg=null;const r=readCharFile(text);if(r.err){loadMsg=[false,r.err];render();return}
  const id=newId();CHARS.unshift({id,name:r.name,S:r.S,saved:Date.now(),sum:null});openChar(id);
  const cp=r.camp;loadMsg=null;render();if(cp&&(cp.d!==GM.d||cp.m!==GM.m||cp.y!==GM.y)){const n=$('#dlnote');if(n)n.textContent='This file was made for a campaign starting '+cp.d+' '+(MONTHS[cp.m-1]||'')+' '+yearTxt(cp.y)+'. Yours starts '+campTxt()+', so the birth year may differ.'}}
-function syncGM(){$('#eyebrow').textContent='Character roll · '+yearTxt(GM.y);const m=$('#camp-m');if(!m.options.length)m.innerHTML=MONTHS.map((n,i)=>`<option value="${i+1}">${n}</option>`).join('');const set=(el,v)=>{if(document.activeElement!==el)el.value=v};set($('#camp-d'),GM.d);set(m,GM.m);set($('#camp-y'),GM.y);$('#gm-sindarin').checked=!!GM.Sindarin;$('#gm-khuzdul').checked=!!GM.Khuzdul;$('#gm-accents').checked=GM.accents!==false}
+function syncGM(){$('#eyebrow').textContent='Character roll · '+yearTxt(GM.y);const m=$('#camp-m');if(!m.options.length)m.innerHTML=MONTHS.map((n,i)=>`<option value="${i+1}">${n}</option>`).join('');const set=(el,v)=>{if(document.activeElement!==el)el.value=v};set($('#camp-d'),GM.d);set(m,GM.m);set($('#camp-y'),GM.y);$('#gm-sindarin').checked=!!GM.Sindarin;$('#gm-khuzdul').checked=!!GM.Khuzdul;$('#gm-accents').checked=GM.accents!==false;$('#gm-pdfdraft').checked=!!GM.pdfDraft}
 function render(){syncGM();const st=VIEW==='start';$('#start').hidden=!st;$('#steps').hidden=st;$('#cols').hidden=st;$('#lnk-chars').hidden=st;document.querySelector('.banner').classList.toggle('inchar',!st);
  if(st){$('#sect').textContent='Characters';store();startScreen();return}
- ageSettled();$('#sect').textContent=STEPS[S.step];steps();panel();sheet();$('#name').value=currentName();showFormal();showPortrait();saveNow()}
+ ageSettled();$('#sect').textContent=STEPS[S.step];steps();panel();sheet();$('#name').value=currentName();showFormal();showPortrait();saveNow();pdfGate()}
 
 /* ---------- events ---------- */
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.val;
+ if(pdfBusy&&VIEW==='start')return;
  if(a==='dl'){download(v||CUR);return}
- if(a==='pdf'){downloadPdf();return}
+ if(a==='pdf'){downloadPdf(v);return}
  if(a==='pickfile'){const f=$('#filein');f.value='';f.click();return}
  if(a==='finish'){const I=issues();saveNow();finMsg={id:CUR,name:$('#name').value.trim()||'Your character',todo:ORDER.filter(i=>!done(i)||(I[i]||[]).length).map(i=>STEPS[i])};VIEW='start';pendingDel=null;loadMsg=null;render();window.scrollTo(0,0);return}
  if(a==='chars'){finMsg=null;VIEW='start';pendingDel=null;loadMsg=null;render();window.scrollTo(0,0);return}
