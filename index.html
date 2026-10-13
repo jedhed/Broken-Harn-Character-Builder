@@ -1260,9 +1260,9 @@ function pdfData(name){const V={},B=[],CAP={},N=[];const c=culture();const {led,
  STRANDS.forEach((x,i)=>{const k='Strand: '+x;const thin=mag&&S.sw.thin.includes(x);if(led[k]||thin)set(PDFSTR[x]+'_level',Math.min(99,tot(k)));if(thin)CAP['Thin_'+(i+1)]='T'});
  if(led.Piety)set('starting_piety_level',Math.min(90,tot("Piety")));
  const LF=[['Language_1_name','language_pct','language_ex'],['Language_2_name','language2_pct','language2_ex'],['Language_3_name','language3_pct','language3_ex']];
- t.L.forEach((l,i)=>{if(i<3){set(LF[i][0],l[0]);set(LF[i][1],l[1])}else N.push('Tongue: '+l[0]+' '+l[1])});
+ t.L.forEach((l,i)=>{if(i<3){set(LF[i][0],l[0]);set(LF[i][1],l[1])}});/* Tongues past the third are listed in full on page 3. */
  const WF=[['lore_wise_name','lore_wise_custom_pct'],['bind_wise_1_name','bind_wise_1_pct'],['bind_wise_2_name','bind_wise_2_pct']];
- t.W.forEach((w,i)=>{if(i<3){set(WF[i][0],w[0].replace(/-wise$/i,''));set(WF[i][1],w[1])}else N.push('Lore: '+w[0]+' '+w[1])});
+ t.W.forEach((w,i)=>{if(i<3){set(WF[i][0],w[0].replace(/-wise$/i,''));set(WF[i][1],w[1])}});
  set('max_resolve',A.res.val);set('initiative',A.init.val+G.pen);set('init_penalty',G.pen);set('total_initiative',A.init.val);set('toughness',A.tough.val);set('death_threshold',A.dt.val);set('lethality_level',A.ll.val);
  Object.entries(talentSlots().reduce((m,[id,tn])=>{const k=tn+(subOf(id,tn)?': '+subOf(id,tn):'');m[k]=(m[k]||0)+1;return m},{})).map(([k,n])=>k+(n>1?' ×'+n:'')).forEach((x,i)=>i<10?set('talent_'+(i+1),x):N.push('Talent: '+x));
  G.pieces.forEach(x=>{const f=PDFLOC[x.k];set(f+'_armor',x.a[0]);set(f+'_ap',x.a[2]);set(f+'_bulk',x.a[3])});
@@ -1281,6 +1281,48 @@ function pdfData(name){const V={},B=[],CAP={},N=[];const c=culture();const {led,
  const inv=[...S.gear.items.filter(x=>!x.hand).map(x=>[x.n,WMAP[x.n][4]]),...S.gear.misc.map(n=>[n,MISC.find(m=>m[0]===n)[2]])];
  inv.forEach(([n,e],i)=>{if(i<10){set('inventory_'+(i+1),n);set('inventory_'+(i+1)+'_enc',e)}else N.push('Item: '+n+', ENC '+e)});
  return{V,B,CAP,N}}
+/* PDF page 3: the Hârn details the TBE sheet has no room for. Text runs down the left two thirds; the portrait sits top right in a frame. A long character continues on page 4. */
+function page3Data(){const c=culture();const t=tongues();const R=[];const has=v=>v!==''&&v!==null&&v!==undefined;
+ const sec=(h,rows,kind)=>{rows=rows.filter(r=>has(r[1]));if(rows.length)R.push({h,rows,kind:kind||'label'})};
+ const place=S.place?(S.nation==='tribal'?'Among the '+S.place:(S.inSet?S.place:'A village near '+S.place)+', '+NAT[S.nation].name):'';
+ sec('Origin',[['Formal name',formalName()],['Folk',S.folk+(S.sex?', '+S.sex.toLowerCase():'')+(orbP()?', '+orbP():'')],['Born',place],['Kingdom',ivK()?kingLabel(S.place):''],['Society',c],
+  ['Clan',S.clan?S.clan+(thrall()?' (owned by, not a member)':''):''],['Father',patroOn()&&S.father?S.father+' ('+patronymic()+')':''],['Byname',byOn()&&S.byname&&!S.nameHand?S.byname:'']]);
+ sec('Station and upbringing',[['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?String(statusVal()):'']]);
+ const sg=activeSign(),k=sg?SIGNSK[sg]:[],af=signAff(),ss=S.birth?sunsign(S.birth):'';
+ sec('Birth and sunsign',[['Born on',S.birth?S.birth.d+' '+monthName(S.birth.m)+(ageSettled()?' '+unesc(yearTxt(birthYear())):''):''],['Age',ageSettled()?S.age+', '+ageYears():''],
+  ['Sunsign',ss?ss+(sg&&sg!==ss?', taking '+sg:''):''],['Its gifts',sg?'+10 '+k[0]+', +5 '+k[1]+' and '+k[2]:''],['Affinity',af?af[0].join(' and ')+' (+1 Mastery)':''],['Impedance',af?af[1].join(' and ')+' (+1 TC)':'']]);
+ sec('Tongues and lore',[...t.L.map(l=>[l[0],String(l[1]),l[2]||'']),...t.W.map(w=>[w[0],String(w[1]),w[2]||''])],'value');
+ return R}
+async function addPage3(doc,L,F,safe,name){const W=612,H=792,M=18,G=12,PW=Math.round((W-2*M-G)/3),LW=W-2*M-G-PW,TOP=700,BOT=28;
+ const red=L.rgb(.502,0,0),ink=L.rgb(.17,.17,.17),grey=L.rgb(.42,.42,.42),bar=L.rgb(.91,.91,.91),edge=L.rgb(.35,.35,.35);
+ const head=await doc.embedPage(doc.getPages()[1],{left:0,bottom:719,right:W,top:H});
+ const nw=(s,f,z)=>f.widthOfTextAtSize(safe(s,f),z);
+ const wrap=(s,f,z,w)=>{const out=[];let ln='';safe(s,f).split(/\s+/).forEach(wd=>{const tr=ln?ln+' '+wd:wd;if(ln&&f.widthOfTextAtSize(tr,z)>w){out.push(ln);ln=wd}else ln=tr});if(ln)out.push(ln);return out.length?out:['']};
+ const caps=(p,s,x,y,z)=>{let cx=x;[...s.toUpperCase()].forEach(ch=>{p.drawText(safe(ch,F.TiRo),{x:cx,y,size:z,font:F.TiRo,color:ink});cx+=F.TiRo.widthOfTextAtSize(safe(ch,F.TiRo),z)+z*0.08});return cx-x};
+ const capsW=(s,z)=>[...s.toUpperCase()].reduce((a,ch)=>a+F.TiRo.widthOfTextAtSize(safe(ch,F.TiRo),z)+z*0.08,0);
+ /* A box in the sheet's style: rounded corners, the heading set into the top line. */
+ const box=(p,x,top,w,h,title)=>{const r=8,tw=capsW(title,12.5);const path=`M ${r+tw+8} 0 L ${w-r} 0 Q ${w} 0 ${w} ${r} L ${w} ${h-r} Q ${w} ${h} ${w-r} ${h} L ${r} ${h} Q 0 ${h} 0 ${h-r} L 0 ${r} Q 0 0 ${r} 0`;
+  p.drawSvgPath(path,{x,y:top,borderColor:edge,borderWidth:.8});caps(p,title,x+r+2,top-4.3,12.5)};
+ const newPage=()=>{const p=doc.addPage();p.setSize(W,H);p.drawPage(head,{x:0,y:719});if(name)p.drawText(safe(name,F.TiBo),{x:26,y:736,size:Math.min(15,15*170/Math.max(170,nw(name,F.TiBo,15))),font:F.TiBo,color:red});return p};
+ let p=newPage();
+ /* Portrait, top right, a third of the page wide. */
+ {const x=M+LW+G,iw=PW-14,ih=Math.round(iw*4/3),bh=ih+24;box(p,x,TOP,PW,bh,'Portrait');
+  if(portOK(S.portrait)){try{const im=await doc.embedJpg(S.portrait);p.drawImage(im,{x:x+7,y:TOP-14-ih,width:iw,height:ih})}catch(e){}}
+  else p.drawRectangle({x:x+7,y:TOP-14-ih,width:iw,height:ih,color:bar})}
+ const LBL=82,VZ=10.5,LH=12.6,vw=LW-LBL-18;
+ const rowH=(s,r)=>s.kind==='value'?LH+4:wrap(r[1],F.TiRo,VZ,vw).length*LH+4;
+ let y=TOP;
+ for(const s of R3()){let i=0,first=true;
+  while(i<s.rows.length){const seg=[];let yy=y-17;while(i+seg.length<s.rows.length){const h=rowH(s,s.rows[i+seg.length]);if(yy-h<BOT+6)break;seg.push([s.rows[i+seg.length],yy,h]);yy-=h}
+   const left=s.rows.length-i;if(seg.length<Math.min(2,left)){if(y===TOP){/* nothing fits on an empty page: should not happen */break}p=newPage();y=TOP;continue}
+   box(p,M,y,LW,y-yy+6,first?s.h:s.h+', continued');
+   seg.forEach(([r,ry,h],j)=>{if(j%2===0)p.drawRectangle({x:M+6,y:ry-h+1,width:LW-12,height:h-1,color:bar});
+    if(s.kind==='value'){const v=safe(r[1],F.TiBo),vx=M+LW-12-F.TiBo.widthOfTextAtSize(v,VZ);let nm=safe(r[0],F.TiRo);p.drawText(nm,{x:M+10,y:ry-LH+2,size:VZ,font:F.TiRo,color:red});
+     if(r[2]){let note=safe(r[2],F.TiRo);const nx=M+14+F.TiRo.widthOfTextAtSize(nm,VZ),room=vx-8-nx;while(note&&F.TiRo.widthOfTextAtSize(note,8)>room)note=note.slice(0,-2).trimEnd()+'…';if(room>20)p.drawText(note,{x:nx,y:ry-LH+2,size:8,font:F.TiRo,color:grey})}
+     p.drawText(v,{x:vx,y:ry-LH+2,size:VZ,font:F.TiBo,color:red})}
+    else{caps(p,r[0],M+10,ry-LH+2.5,7.2);wrap(r[1],F.TiRo,VZ,vw).forEach((ln,k)=>p.drawText(ln,{x:M+10+LBL,y:ry-LH+2-k*LH,size:VZ,font:F.TiRo,color:red}))}});
+   i+=seg.length;y=yy-6-16;first=false;if(i<s.rows.length){p=newPage();y=TOP}}}
+ function R3(){return page3Data()}}
 async function makePdf(name){const[L,buf]=await Promise.all([loadPdfLib(),loadSheet()]);const doc=await L.PDFDocument.load(buf);const form=doc.getForm();
  const F={TiBo:await doc.embedFont(L.StandardFonts.TimesRomanBold),TiRo:await doc.embedFont(L.StandardFonts.TimesRoman),Helv:await doc.embedFont(L.StandardFonts.Helvetica)};
  const D=pdfData(name);const lost=[];
@@ -1295,6 +1337,7 @@ async function makePdf(name){const[L,buf]=await Promise.all([loadPdfLib(),loadSh
  Object.entries(D.V).forEach(([k,v])=>{let f;try{f=form.getTextField(k)}catch(e){return}if(DASIB(k)){try{const da=daOf(form.getTextField(DASIB(k)));const sib=form.getTextField(DASIB(k));if(da){f.acroField.setDefaultAppearance(da);f.acroField.getWidgets().forEach(w=>w.setDefaultAppearance(da))}f.setAlignment(sib.getAlignment())}catch(e){}}const font=fontOf(f);f.setText(safe(v,font));if(/^life_/.test(k))f.setFontSize(10);if(/^note_/.test(k))f.setFontSize(9);f.updateAppearances(font)});
  D.B.forEach(k=>{try{const cb=form.getCheckBox(k);cb.check();cb.defaultUpdateAppearances()}catch(e){}});
  Object.entries(D.CAP).forEach(([k,cap])=>{try{const b=form.getButton(k);b.acroField.getWidgets().forEach(w=>{w.dict.delete(L.PDFName.of('BS'));w.getOrCreateAppearanceCharacteristics().setCaptions({normal:cap})});b.updateAppearances(F.TiBo)}catch(e){}});
+ try{await addPage3(doc,L,F,safe,name)}catch(e){lost.push('page 3 ('+(e&&e.message||'error')+')')}
  return{bytes:await doc.save({updateFieldAppearances:false}),lost}}
 async function downloadPdf(){const nm=$('#name').value;const fn=fileName(nm).replace(/\.md$/,'.pdf');const say=m=>{const n=$('#dlnote');if(n)n.textContent=m};const btn=$('#pdfbtn');if(btn)btn.disabled=true;say('Preparing PDF…');
  let r;try{r=await makePdf(nm)}catch(e){say('The PDF could not be made. Check your connection and try again.');if(btn)btn.disabled=false;return}
