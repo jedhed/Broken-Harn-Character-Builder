@@ -166,6 +166,7 @@ details.calls ol{color:var(--muted);max-width:75ch;padding-left:22px}
 .seg button[aria-pressed="true"]{background:var(--primary);color:var(--onp)}
 .portwrap{width:150px;padding:4px;border:1px solid var(--ink);background:var(--card);box-shadow:3px 3px 0 var(--hair)}.portwrap img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}.portwrap.side{margin:6px 0 4px}.portrow{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}textarea.text{resize:vertical;font:inherit;line-height:1.4;min-height:4.5em}textarea.tall{min-height:9em}
 .formal{font:italic 500 15.5px var(--head);color:var(--muted);margin-top:2px}
+.lkrows{display:flex;flex-direction:column}.lkrow{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--hair)}.lkctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0}.lkctl .hint{flex-basis:100%}.lkctl .hint.lkunit{flex-basis:auto}input.text.lknum{width:5.5em}input.text.lkword{width:auto;flex:1;min-width:120px;max-width:200px}button.link.sm{font:600 14px var(--body)}@media (max-width:600px){.lkrow{grid-template-columns:1fr}}
 .savenote{font-size:13px;font-weight:600;color:var(--ok-t);min-height:1.2em}.savenote.bad{color:var(--bad-t)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .ents{display:flex;flex-direction:column;gap:7px}
@@ -741,6 +742,103 @@ function goalText(){const f=id=>{const el=$('#'+id);return el?el.value.trim().re
 function goalCnt(){const n=S.goals.length,me=S.goals.filter(g=>g.kind==='individual').length,sh=n-me;const ok=n>=3&&n<=5&&me>=1&&sh>=1;const txt=n+(n===1?' goal':' goals');
  const msg=!me?(n?txt+' · write a personal goal':'Write a personal goal'):n<3?txt+' · aim for 3 to 5':n>=6?txt:!sh?txt+' · add a shared one':txt;
  return`<span class="chips" style="align-items:center">${n?`<span class="hint">${me} personal · ${sh} shared</span>`:''}<span class="cnt ${ok?'ok':'warn'}">${msg}</span></span>`}
+/* ---------- appearance ----------
+   Complexion, hair, eyes, build and handedness from HârnMaster Kèthîra, Appendix III. Heights from HM3 (human women −5" here).
+   Frame comes from a size score worked out from the character; the build slider says whether the weight is muscle or fat. */
+const CXS=['Very light','Light','Medium','Dark','Very dark'];
+/* d100 upper bounds, in the order of the names list. 0 = can't happen in that column. */
+const CX_T={high:[6,94,99,100,0],mid:[1,27,73,100,0],sind:[0,97,99,100,0],khuz:[73,90,99,100,0]};
+const HAIRS=['Black','Brown','Red','Auburn','Dark blonde','Blonde','White or silver'];
+const HAIR_T={light:[5,40,45,55,70,95,100],med:[15,55,58,65,80,95,100],dark:[45,85,86,90,93,95,100],vdark:[65,95,0,96,97,98,100],sind:[25,48,0,50,65,90,100],khuz:[5,45,55,70,75,80,100]};
+const EYES=['Brown','Hazel','Blue','Grey','Green','Violet'];
+const EYE_T={light:[5,10,50,85,99,100],med:[45,55,75,95,99,100],dark:[80,90,95,98,99,100],sind:[8,15,35,85,90,100]};
+const FRAMES=['Scant','Light','Medium','Heavy','Massive'];
+/* HMK frame table, heights 44"–85": the top weight of Scant, Light, Medium and Heavy. Massive is anything above. The book's 63" Heavy (125–153) is corrected to 141–153. */
+const FRAME_ROWS=[[70,79,87,95],[72,81,89,98],[74,82,92,101],[75,84,94,103],[77,86,96,105],[79,88,98,107],[81,90,100,110],[83,92,102,112],[85,95,105,115],[87,98,108,118],[90,100,111,122],[92,103,115,126],[95,106,118,129],[98,109,121,133],[100,112,124,136],[103,115,127,139],[105,117,130,142],[108,120,133,146],[110,123,136,149],[113,127,140,153],[116,130,144,157],[120,134,148,162],[123,138,152,167],[126,141,156,171],[130,145,160,176],[133,149,164,180],[136,152,168,184],[140,157,173,190],[144,161,178,195],[149,166,184,200],[153,171,189,207],[157,176,194,213],[161,181,200,219],[166,186,205,225],[170,190,210,230],[175,195,215,236],[180,200,220,241],[184,204,226,247],[188,209,231,253],[191,214,237,259],[196,219,242,265],[200,223,247,271]];
+const frameRow=h=>FRAME_ROWS[Math.max(44,Math.min(85,h))-44];
+const frameOf=(h,w)=>{const i=frameRow(h).findIndex(x=>w<=x);return i<0?4:i};
+/* A weight inside a frame's range for that height. Scant runs 12 lb below its top, Massive 20 lb above Heavy's top. */
+const weightIn=(h,f,pos)=>{const r=frameRow(h);const lo=f===0?r[0]-12:r[f-1]+1,hi=f===4?r[3]+20:r[f];return Math.round(lo+(hi-lo)*pos)};
+const htTrait=h=>h<=62?'Small':h<=66?'Short':h<=70?'Average':h<=74?'Tall':'Great';
+/* Build words: frame (Scant to Massive) by slider fifth (soft to muscular). */
+const BUILDW=[['Frail','Gaunt','Thin','Lean','Sinewy'],['Soft','Slight','Slender','Lean','Wiry'],['Soft','Plump','Ordinary','Fit','Athletic'],['Heavyset','Stout','Solid','Stocky','Burly'],['Corpulent','Portly','Big','Hulking','Brawny']];
+const PHYS=['Dodge','Melee: Light','Melee: Medium','Melee: Heavy','Might','Missile','Thrown','Athletics','Endurance','Survival','Track','Ride','Sail/Boat'];
+const SOFTSK=()=>[...CAT.Social,...CAT.Lore];
+const newLook=()=>({cx:'',hair:'',eyes:'',hd:null,ht:null,fr:false,nudge:0,wpos:.5,frame:'',wt:null,hand:'',sl:null,word:'',lock:{},cxNew:false});
+const LK=()=>S.look||(S.look=newLook());
+const ftIn=h=>Math.floor(h/12)+' ft '+(h%12)+' in ('+Math.round(h*2.54)+' cm)';
+const lbKg=w=>w+' lb ('+Math.round(w*.4536)+' kg)';
+function rollT(b){const r=rnd(100);for(let i=0;i<b.length;i++)if(b[i]&&r<=b[i])return i;return b.length-1}
+/* Complexion follows the family's homeland, not where the character grew up. A child of Ivinian and Jarin parents rolls both and takes the middle. */
+function cxCols(){if(S.folk==='Sindarin')return['sind'];if(S.folk==='Khuzdul')return['khuz'];if(S.nation==='orbaal'&&S.people)return orbMixed()?['high','mid']:[S.people==='Ivinian'?'high':'mid'];return[(S.dual||S.nation)==='ivinia'?'high':'mid']}
+function rollCx(){const c=cxCols().map(k=>rollT(CX_T[k]));if(c.length===1)return CXS[c[0]];const s=c[0]+c[1];return CXS[s%2?(s-1)/2+(rnd(2)-1):s/2]}
+function hairCol(){if(S.folk==='Sindarin')return'sind';if(S.folk==='Khuzdul')return'khuz';const i=CXS.indexOf(LK().cx);return i<=1?'light':i===2?'med':i===3?'dark':'vdark'}
+function eyeCol(){if(S.folk==='Sindarin')return'sind';const i=CXS.indexOf(LK().cx);return i<=1?'light':i===2?'med':'dark'}
+/* HM3 heights: the fixed part, before 4d6. */
+function htBase(){const fem=S.sex==='Female';if(S.folk==='Khuzdul')return 40;if(S.folk==='Sindarin')return 51-(fem?1:0);return 54-(fem?5:S.sex?0:2)}
+function htMods(){if(S.folk!=='Human')return[];const m=[];if(S.nation==='ivinia'||S.dual==='ivinia'||(orbP()==='Ivinian'&&!orbMixed()))m.push([1,'Ivinian']);if(S.cls==='noble')m.push([2,'noble']);if(env()==='City'&&['slave','serf','unguilded'].includes(S.cls))m.push([-2,'urban poor']);return m}
+/* The size score: 10 is an average person. It picks the frame, never shown as a number. */
+function sizeInfo(){const{led}=ledger();const v=x=>Math.max(0,Math.min(70,(led[x]||[]).reduce((a,p)=>a+p[0],0)));let s=10;const why=[];const str=S.abil.some(a=>a.name==='Strength');
+ if(str){s+=3;why.push('your Strength aptitude')}const m=v('Might'),ma=m>=30?Math.floor((m-30)/15):-1;if(ma)why.push('Might '+m);s+=ma;
+ const at=v('Athletics'),aa=at>30?Math.floor((at-30)/20):0;if(aa)why.push('Athletics '+at);s+=aa;if(S.age==='Old'){s-=1;why.push('age')}
+ return{s:Math.max(5,Math.min(18,s)),why,str,v}}
+function slSuggest(I){const g=l=>l.reduce((a,x)=>a+Math.max(0,I.v(x)-20),0)/l.length;const p=g(PHYS),q=g(SOFTSK());let d=p+q?(p-q)/(p+q):0;if(I.str)d+=.25;d=Math.max(-1,Math.min(1,d));return Math.round(50+50*d)}
+function lookNow(){const l=S.look;if(!l)return null;const I=sizeInfo();
+ const ht=l.ht!==null?l.ht:l.hd===null?null:htBase()+l.hd+htMods().reduce((a,m)=>a+m[0],0);
+ const fAuto=Math.max(1,Math.min(4,(I.s<=7?1:I.s<=12?2:I.s<=15?3:4)+l.nudge));let fi=-1,wt=null;
+ if(l.wt!==null){wt=l.wt;fi=l.frame?FRAMES.indexOf(l.frame):ht===null?-1:frameOf(ht,wt)}
+ else if(l.frame||l.fr){fi=l.frame?FRAMES.indexOf(l.frame):fAuto;if(ht!==null)wt=weightIn(ht,fi,l.wpos)}
+ const sg=slSuggest(I),sl=l.sl===null?sg:l.sl;
+ return{ht,wt,frame:FRAMES[fi]||'',fi,sl,sg,word:l.word||(fi<0?'':BUILDW[fi][Math.min(4,Math.floor(sl/20))]),I,auto:!l.frame&&l.wt===null}}
+function lookDone(){const l=S.look,N=lookNow();return!!(l&&l.cx&&l.hair&&l.eyes&&l.hand&&N.ht!==null&&N.frame)}
+/* Roll one trait, or everything not locked when k is empty. */
+function rollLook(k){const l=LK(),lk=l.lock,one=x=>(!k||k===x)&&!lk[x];
+ if(one('cx')){const o=l.cx;l.cx=rollCx();if(k==='cx'&&o&&l.cx!==o&&(l.hair||l.eyes))l.cxNew=true}
+ if(!l.cx)l.cx=rollCx();
+ if(one('hair'))l.hair=HAIRS[rollT(HAIR_T[hairCol()])];
+ if(one('eyes'))l.eyes=EYES[rollT(EYE_T[eyeCol()])];
+ if(one('ht')){l.hd=rnd(6)+rnd(6)+rnd(6)+rnd(6);l.ht=null}
+ if(one('frame')){const r=rnd(6);l.nudge=r===1?-1:r===6?1:0;l.wpos=Math.random();l.frame='';l.wt=null;l.fr=true}
+ if(k==='wt'&&!lk.frame){l.wpos=Math.random();l.wt=null;l.fr=true}
+ if(one('hand'))l.hand=rnd(200)<=({Human:175,Sindarin:165,Khuzdul:100}[S.folk]||175)?'Right':'Left';
+ if(!k)l.cxNew=false}
+function setLook(k,v){const l=LK();
+ if(k==='ht'||k==='wt'){const n=Math.round(+v);l[k]=v===''||!Number.isFinite(n)?null:Math.max(k==='ht'?36:40,Math.min(k==='ht'?96:400,n));if(k==='wt')l.fr=true;return}
+ if(k==='sl'){l.sl=Math.max(0,Math.min(100,+v||0));return}if(k==='word'){l.word=v.trim();return}
+ if(k==='frame'){l.frame=v;l.wt=null;l.fr=true;return}
+ if(k==='cx'&&l.cx&&v!==l.cx&&(l.hair||l.eyes))l.cxNew=true;l[k]=v}
+function lookAct(a,v){const l=LK();if(a==='lkroll')rollLook(v||'');else if(a==='lklock')l.lock[v]=!l.lock[v];else if(a==='lkreset')l.sl=null;else if(a==='lkauto')l[v]=v==='frame'?'':null;else if(a==='lkmatch'){rollLook('hair');rollLook('eyes');l.cxNew=false}else if(a==='lkkeep')l.cxNew=false}
+/* Labelled rows for the .md and PDF page 3. */
+function lookRows(){const l=S.look,N=lookNow();if(!l)return[];return[['Complexion',l.cx],['Hair',l.hair],['Eyes',l.eyes],['Height',N.ht===null?'':ftIn(N.ht)+', '+htTrait(N.ht).toLowerCase()],['Weight',N.wt===null?'':lbKg(N.wt)],['Build',N.frame?N.frame+' frame'+(N.word?', '+N.word.toLowerCase():''):''],['Handedness',l.hand?l.hand+'-handed':'']].filter(r=>r[1])}
+/* For the image prompt: what shows in a picture. */
+function lookPhrase(){const l=S.look,N=lookNow();if(!l)return'';const SK={'Very light':'very pale, fair skin','Light':'fair skin','Medium':'lightly olive, northern European skin','Dark':'olive, sun-darkened Mediterranean skin, like a southern Spaniard or Italian','Very dark':'dark brown skin of African descent'};
+ const f=[l.cx?SK[l.cx]:'',l.hair?l.hair.toLowerCase()+' hair':'',l.eyes?l.eyes.toLowerCase()+' eyes':''].filter(Boolean);const out=[];
+ if(f.length)out.push('with '+(f.length>1?f.slice(0,-1).join(', ')+' and '+f[f.length-1]:f[0]));
+ if(S.folk==='Human'&&N.ht!==null){const t={Small:'very short',Short:'short',Tall:'tall',Great:'very tall'}[htTrait(N.ht)];if(t)out.push(t)}
+ if(N.word)out.push('of '+N.word.toLowerCase()+' build');return out.join(', ')}
+function lookPanel(){const l=S.look||newLook(),N=lookNow()||{ht:null,wt:null,frame:'',fi:-1,sl:50,sg:50,word:'',auto:true,I:sizeInfo()};
+ const opts=(list,cur,blankLbl)=>`<option value="">${blankLbl}</option>`+list.map(x=>`<option ${x===cur?'selected':''}>${x}</option>`).join('');
+ const acts=k=>`<span class="chips"><button class="btn mini" data-act="lkroll" data-val="${k}" ${l.lock[k]?'disabled':''}>Reroll</button><button class="chip" aria-pressed="${!!l.lock[k]}" data-act="lklock" data-val="${k}" title="A locked trait is left alone by Roll appearance">${l.lock[k]?'Locked':'Lock'}</button></span>`;
+ const row=(k,lab,ctl,hint)=>`<div class="lkrow"><label for="lk_${k}"><b>${lab}</b></label><div class="lkctl">${ctl}${hint?`<span class="hint">${hint}</span>`:''}</div>${acts(k)}</div>`;
+ const sel=(k,list)=>`<select id="lk_${k}" data-look="${k}">${opts(list,l[k],'Not rolled')}</select>`;
+ const hm=htMods();const htHint=N.ht===null?'':(ftIn(N.ht)+' · '+htTrait(N.ht))+(l.ht!==null?` · set by hand <button class="link sm" data-act="lkauto" data-val="ht">use the roll</button>`:hm.length?' · '+hm.map(m=>(m[0]>0?'+':'−')+Math.abs(m[0])+'″ '+m[1]).join(', '):'');
+ const why=N.I.why.length?N.I.why.join(', '):'nothing in particular, so an average build';
+ const frHint=N.auto?(l.fr?`Follows ${why}${l.nudge?`, then one step ${l.nudge>0?'heavier':'lighter'} by the dice`:''}.`:''):l.frame?`Chosen by hand. <button class="link sm" data-act="lkauto" data-val="frame">Follow your skills</button>`:'';
+ const wtHint=N.wt===null?'':lbKg(N.wt)+(l.wt!==null?` · set by hand <button class="link sm" data-act="lkauto" data-val="wt">use the roll</button>`:'');
+ const slTxt=N.sg>60?'Starts toward muscular: your physical skills outweigh your social and lore skills.':N.sg<40?'Starts toward soft: your social and lore skills outweigh your physical ones.':'Starts in the middle: your skills are fairly even.';
+ return`<div class="sub"><div class="lab"><span><b>Appearance</b> <span class="hint">rolled from your folk, family and skills. Lock what you want to keep.</span></span><button class="btn roll" data-act="lkroll" data-val="">Roll appearance</button></div>
+ ${l.cxNew?`<div class="notice" role="status"><span>Your complexion changed. Hair and eyes were rolled for the old one.</span><span class="chips"><button class="btn" data-act="lkmatch">Reroll hair and eyes</button><button class="link sm" data-act="lkkeep">Keep them</button></span></div>`:''}
+ <div class="lkrows">
+ ${row('cx','Complexion',sel('cx',CXS),orbMixed()&&S.folk==='Human'?'between your Ivinian and Jarin parents':'')}
+ ${row('hair','Hair',sel('hair',HAIRS))}
+ ${row('eyes','Eyes',sel('eyes',EYES))}
+ ${row('ht','Height',`<input class="text lknum" type="number" id="lk_ht" min="36" max="96" data-look="ht" value="${N.ht===null?'':N.ht}" aria-label="Height in inches"> <span class="hint lkunit">in</span>`,htHint)}
+ ${row('frame','Frame',`<select id="lk_frame" data-look="frame">${`<option value="" ${l.frame?'':'selected'}>${l.fr||l.frame?'Follow skills'+(N.auto&&N.frame?' ('+N.frame+')':''):'Not rolled'}</option>`+FRAMES.map(x=>`<option ${x===l.frame?'selected':''}>${x}</option>`).join('')}</select> <input class="text lknum" type="number" min="40" max="400" data-look="wt" value="${N.wt===null?'':N.wt}" aria-label="Weight in pounds"> <span class="hint lkunit">lb</span>`,[frHint,wtHint].filter(Boolean).join('<br>'))}
+ ${row('hand','Handedness',sel('hand',['Right','Left']),'Ambidextrous is a Talent, not a roll.')}
+ </div>
+ <div class="field"><div class="lab"><label for="lk_sl"><b>Build</b> <span class="hint">what the weight is made of. It changes no numbers.</span></label>${l.sl!==null?'<button class="link sm" data-act="lkreset">Reset to suggested</button>':''}</div>
+  <div class="agerow"><span class="hint">Soft</span><input type="range" id="lk_sl" min="0" max="100" step="1" data-look="sl" value="${N.sl}" aria-label="Build, from soft to muscular"><span class="hint">Muscular</span><input class="text lkword" data-look="word" value="${esc(l.word)}" placeholder="${esc(N.word||'Build word')}" aria-label="Build word"></div>
+  <span class="hint">${l.sl===null?slTxt+(N.I.str?' Your Strength aptitude nudges it toward muscular.':''):'Set by hand.'}${l.word?' The build word is yours; clear it to use the suggested one.':N.frame?'':' Roll a frame to get a build word.'}</span></div></div>`}
 /* ---------- portrait and image prompt ---------- */
 /* The house art style for portrait prompts. Edit these two to change every prompt the builder writes. */
 const ART_LEAD='Ink-and-watercolor fantasy character portrait with varied ink outlines, translucent earthy washes and a scratchy, textured surface.';
@@ -760,7 +858,7 @@ function armorText(){const by={};LOC.forEach(([k])=>{const a=S.gear.armor[k];if(
  const where=ks=>{const w=[];if(ks.includes('Head'))w.push('head');if(ks.includes('Body'))w.push('body');const arms=['LArm','RArm'].filter(k=>ks.includes(k)).length,legs=['LLeg','RLeg'].filter(k=>ks.includes(k)).length;if(arms)w.push(arms===2?'arms':'one arm');if(legs)w.push(legs===2?'legs':'one leg');return w.length>1?w.slice(0,-1).join(', ')+' and '+w[w.length-1]:w[0]};
  return Object.entries(by).map(([a,ks])=>a.toLowerCase()+' armour on the '+where(ks)).join(', ')}
 function promptText(){const man=S.sex==='Female'?'woman':S.sex==='Male'?'man':'person';const age=ageSettled()?ageYears():'';
- const who=[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf()].filter(Boolean).join(', ');
+ const who=[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf(),lookPhrase()].filter(Boolean).join(', ');
  const bits=[];if(S.cls)bits.push('wearing '+CLOTHES[S.cls]);const ar=armorText();if(ar)bits.push(ar);
  const held=[...new Set(S.gear.items.filter(x=>x.hand).map(x=>x.n.toLowerCase()))].map(w=>(/^[aeiou]/.test(w)?'an ':'a ')+w);if(held.length)bits.push('carrying '+(held.length>1?held.slice(0,-1).join(', ')+' and '+held[held.length-1]:held[0]));
  const L=['Half-length portrait, waist up, in a vertical 3:4 frame, of '+who+'.'];
@@ -803,6 +901,7 @@ function namePanel(){const ev=everyday(),fm=formalName();
   ${clanField()}${fatherField()}${bynameField()}
   <div class="field"><label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="nhand" data-nhand="1" ${S.nameHand?'checked':''}> Write the whole name myself</label>${S.nameHand?`<input class="text" id="handname" data-handname="1" value="${esc(S.handName)}" placeholder="The name exactly as it should read"><span class="hint">This replaces the name built from the parts above.</span>`:''}</div>
   <div class="result">${S.nameHand?(S.handName.trim()?`Name: <b>${esc(S.handName.trim())}</b> (written by hand)`:'Write the name above, or untick to build it from its parts.'):ev?`Name: <b>${esc(ev)}</b>${fm?`<br>Formal name: ${esc(fm)}`:''}`:'Roll or type a given name to name your character.'}</div></div>
+ ${lookPanel()}
  ${portraitPanel()}`}
 function tgPanel(){const tr=S.traits,full=tr.length>=3;const sw=signWords();const desc=S.abil.map(a=>a.desc).filter(Boolean);
  const draw=[...LIFET.filter(([t])=>S.life[t]).map(([t])=>lifeEv(t).name+(S.life[t].rel?' ('+relText(S.life[t])+')':'')),...allyList(),S.parent,S.standing?S.standing+' in the clan':'',S.concept].filter(Boolean);
@@ -938,7 +1037,7 @@ function showFormal(){const f=$('#formal');if(!f)return;const t=formalName();f.t
 function setFather(v){S.father=v}
 
 /* ---------- state ---------- */
-const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
+const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
 let S=blank();
 const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true};
 const AGE_R={Young:[20,29],Adult:[30,49],Old:[50,69]};
@@ -1027,7 +1126,7 @@ function issues(){const I={0:[],1:[],2:[],3:[],4:[],6:[],8:[],9:[],10:[],11:[],1
  if(S.dual&&S.dual===S.nation&&!orbMixed()&&(S.dual!=='tribal'||S.dualTribe===S.place))I[4].push('The family culture is the same as the birthplace. Pick a different one or switch to native.');
  if(tribalFamily()&&!S.dualTribe)I[4].push('Choose which tribal nation your family is from.');
  return I}
-function done(i){switch(i){case 14:return!!currentName();case 0:return!!S.birth;case 1:return!!(S.nation&&S.place)&&(S.nation!=='orbaal'||!!S.people);case 2:return!!(S.cls&&S.occ)&&(!ivClan()||!!S.ivc);case 3:return!!S.bg&&slotsLeft()===0;case 4:return!!S.nation;case 5:return!!(S.sibs&&S.travel);case 6:return Object.keys(CAT).every(c=>S.b30[c]);case 7:return S.abil.length===2&&S.abil.every(a=>a.ex&&a.talent&&a.desc)&&!subsMissing('a').length;case 8:return LIFET.every(([t])=>S.life[t]&&S.life[t].pick);case 9:{const c=cdef();return!!c&&CATS.every(k=>poolLeft(k)===0)&&c.picks.every((_,i)=>S.ctal[i])&&S.cw.slice(0,c.cw[0]).filter(x=>x.mode&&(x.mode!=='wise'||x.name)).length===c.cw[0]&&S.ccoin!==null&&(!c.magic||swDone())&&swCareerOk()&&!subsMissing('fc').length}case 10:return roDone()&&!subsMissing('r').length;case 11:return atLeft()===0&&S.at.tough%2===0;case 12:return S.traits.length>=2&&S.traits.length<=3;case 13:return S.gear.coin!==null&&S.gear.freeN!==null&&gearCalc().left>=0}}
+function done(i){switch(i){case 14:return!!currentName()&&lookDone();case 0:return!!S.birth;case 1:return!!(S.nation&&S.place)&&(S.nation!=='orbaal'||!!S.people);case 2:return!!(S.cls&&S.occ)&&(!ivClan()||!!S.ivc);case 3:return!!S.bg&&slotsLeft()===0;case 4:return!!S.nation;case 5:return!!(S.sibs&&S.travel);case 6:return Object.keys(CAT).every(c=>S.b30[c]);case 7:return S.abil.length===2&&S.abil.every(a=>a.ex&&a.talent&&a.desc)&&!subsMissing('a').length;case 8:return LIFET.every(([t])=>S.life[t]&&S.life[t].pick);case 9:{const c=cdef();return!!c&&CATS.every(k=>poolLeft(k)===0)&&c.picks.every((_,i)=>S.ctal[i])&&S.cw.slice(0,c.cw[0]).filter(x=>x.mode&&(x.mode!=='wise'||x.name)).length===c.cw[0]&&S.ccoin!==null&&(!c.magic||swDone())&&swCareerOk()&&!subsMissing('fc').length}case 10:return roDone()&&!subsMissing('r').length;case 11:return atLeft()===0&&S.at.tough%2===0;case 12:return S.traits.length>=2&&S.traits.length<=3;case 13:return S.gear.coin!==null&&S.gear.freeN!==null&&gearCalc().left>=0}}
 function signPair(b){const doy=(b.m-1)*30+b.d;let i=SIGNS.length-1;for(let k=0;k<SIGNS.length;k++)if(doy>=SIGNS[k][1])i=k;const start=SIGNS[i][1];const into=(doy-start+360)%360;const next=SIGNS[(i+1)%12];const len=(next[1]-start+360)%360;
  return{main:SIGNS[i][0],other:into<2?SIGNS[(i+11)%12][0]:into>=len-2?next[0]:''}}
 function sunsign(b){const p=signPair(b);return p.other?p.main+'–'+p.other+' cusp':p.main}
@@ -1090,7 +1189,7 @@ function rollAll(){rollAll0();if(S.career==='Godbound'&&issues()[6].length)S.rol
 function rollAll0(){const st=S.step;S=blank();S.step=st;const folks=['Human'];S.folk='Human';R.sex();R.b30();S.career=CAREERS[rnd(CAREERS.length)-1];if(S.career==='Godbound'){const ds=Object.keys(FAITH);S.deity=ds[rnd(ds.length)-1];const rs=Object.keys(ROLES).filter(r=>r==='lay'||FAITH[S.deity][r]);S.role=rs[rnd(rs.length)-1]}R.nation();R.cls();if(S.nation==='orbaal')R.people();R.clan();S.wealth=rnd(3)-1;S.bg=suggestBg();R.picks();
  if(rnd(100)<=15){const o=NATIONS.filter(n=>!['other','evael',S.nation].includes(n.id));S.dual=o[rnd(o.length)-1].id;if(S.dual==='tribal')S.dualTribe=pickW(NAT.tribal.places).name}
  else if(rnd(100)<=50){const nl=langOf(S.nation,S.cls,S.folk);const o=LANGS.filter(l=>l!==nl&&l!=='Sindarin');S.lang2=otherL()||o[rnd(o.length)-1]}
- if(S.bg==='wanderer')S.lang40='Jarin';S.age=['Young','Adult','Adult','Old'][rnd(4)-1];R.years();R.birth();R.sibs();R.parent();R.standing();R.travel();R.allies();R.abil();R.abilRest();LIFET.forEach(([t])=>{R.life(t);const o=optionsFor(lifeEv(t));S.life[t].pick=o[rnd(o.length)-1]});R.careerAll();R.roAll();R.atAll();R.gearAll();{const k=Object.keys(TRAITS).concat(signWords());const n=1+rnd(2);while(S.traits.length<n){const t=k[rnd(k.length)-1];if(!S.traits.includes(t))S.traits.push(t)}}}
+ if(S.bg==='wanderer')S.lang40='Jarin';S.age=['Young','Adult','Adult','Old'][rnd(4)-1];R.years();R.birth();R.sibs();R.parent();R.standing();R.travel();R.allies();R.abil();R.abilRest();LIFET.forEach(([t])=>{R.life(t);const o=optionsFor(lifeEv(t));S.life[t].pick=o[rnd(o.length)-1]});R.careerAll();R.roAll();R.atAll();R.gearAll();rollLook('');{const k=Object.keys(TRAITS).concat(signWords());const n=1+rnd(2);while(S.traits.length<n){const t=k[rnd(k.length)-1];if(!S.traits.includes(t))S.traits.push(t)}}}
 /* ---------- render ---------- */
 const cLeft=(n,t,word='left')=>`<span class="cnt ${n<0?'bad':n===0?'ok':'warn'}">${n<0?(-n)+' over':n+' of '+t+' '+word}</span>`;
 const cChosen=(n,t)=>`<span class="cnt ${n===t?'ok':n>t?'bad':'warn'}">${n} of ${t} chosen</span>`;
@@ -1268,6 +1367,7 @@ function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();con
  L.push('','## Origin');
  [...(ivK()?[['Kingdom',kingLabel(S.place)]]:[]),...(byOn()&&S.byname?[['Byname',S.byname]]:[]),['Clan',S.clan+(S.clan&&thrall()?' (owned by, not a member)':'')],...(patroOn()&&S.father?[['Father',S.father+' ('+patronymic()+')']]:[]),['Society',c],['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?statusVal():''],['Coin',S.cls?unesc(coinText()):''],
   ['Family',[S.sibs?(S.sibs.n===1?'Only child':ord(S.sibs.rank)+' of '+S.sibs.n):'',S.parent,S.standing?S.standing+' in the clan':''].filter(Boolean).join(' · ')],['Travelled',S.travel?unesc(travelOut().label):''],['People',S.allies?(allyList().join(' · ')||'None'):'']].forEach(([k,v])=>L.push('- **'+k+':** '+(v===''||v===null||v===undefined?nc:v)));
+ L.push('','## Appearance');{const lr=lookRows();if(lr.length)lr.forEach(([k,v])=>L.push('- **'+k+':** '+v));else L.push(nc)}
  L.push('','## Attributes','| Max Resolve | Initiative | Toughness | Death Threshold | Lethality Level | Inventory slots |','|---|---|---|---|---|---|','| '+[A.res.val,'+'+A.init.val,A.tough.val,A.dt.val,A.ll.val,A.inv.val].join(' | ')+' |');
  const sk=k=>{const m=[S.ro.savvy.includes(k)?'S':'',ex[k]?'Ex'+Math.min(4,ex[k]+1):''].filter(Boolean).join(', ');return[cell(k+(m?' ('+m+')':'')),val(k)]};
  L.push('','## Skills');
@@ -1352,6 +1452,7 @@ function page3Data(){const c=culture();const t=tongues();const R=[];const has=v=
  const place=S.place?(S.nation==='tribal'?'Among the '+S.place:(S.inSet?S.place:'A village near '+S.place)+', '+NAT[S.nation].name):'';
  sec('Origin',[['Formal name',formalName()],['Folk',S.folk+(S.sex?', '+S.sex.toLowerCase():'')+(orbP()?', '+orbP():'')],['Born',place],['Kingdom',ivK()?kingLabel(S.place):''],['Society',c],
   ['Clan',S.clan?S.clan+(thrall()?' (owned by, not a member)':''):''],['Father',patroOn()&&S.father?S.father+' ('+patronymic()+')':''],['Byname',byOn()&&S.byname&&!S.nameHand?S.byname:'']]);
+ sec('Appearance',lookRows());
  sec('Station and upbringing',[['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?String(statusVal()):'']]);
  const sg=activeSign(),k=sg?SIGNSK[sg]:[],af=signAff(),ss=S.birth?sunsign(S.birth):'';
  sec('Birth and sunsign',[['Born on',S.birth?S.birth.d+' '+monthName(S.birth.m)+(ageSettled()?' '+unesc(yearTxt(birthYear())):''):''],['Age',ageSettled()?S.age+', '+ageYears():''],
@@ -1439,7 +1540,8 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
  if(a==='delyes'){CHARS=CHARS.filter(c=>c.id!==v);if(CUR===v)CUR=null;pendingDel=null;render();return}
  if(a==='phase')viewPhase=+v;
  else{
-  if(a==='go'){if(S.step===10&&+v!==10)S.ageSet=true;S.step=+v;viewPhase=null;window.scrollTo(0,0)}
+  if(a.startsWith('lk'))lookAct(a,v);
+  else if(a==='go'){if(S.step===10&&+v!==10)S.ageSet=true;S.step=+v;viewPhase=null;window.scrollTo(0,0)}
   else if(a==='b30'){const[c,x]=v.split('|');S.b30[c]=S.b30[c]===x?'':x}
   else if(a==='career')S.career=S.career===v?'':v;
   else if(a==='role')S.role=v;
@@ -1498,6 +1600,7 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='roll'){if(v==='picks'){const keep=S.picks;R.picks();const b2=BG[S.bg];b2.slots.forEach(sl=>{if((keep[sl.id]||[]).length===sl.n)S.picks[sl.id]=keep[sl.id]});b2.slots.filter(x=>x.not).forEach(x=>{const taken=S.picks[x.not]||[];if((S.picks[x.id]||[]).some(y=>taken.includes(y))){const o=slotOpts(x).slice();const p=[];while(p.length<x.n&&o.length)p.push(o.splice(rnd(o.length)-1,1)[0]);S.picks[x.id]=p}})}else if(v.startsWith('life:'))R.life(v.slice(5));else if(v.startsWith('rel:'))S.life[v.slice(4)].rel=['Friend','Patron','Rival','Adversary'][rnd(4)-1];else if(v.startsWith('lname:'))S.life[v.slice(6)].relName=npcName();else if(v.startsWith('aname:')){if(!S.allyNames)S.allyNames=[];S.allyNames[+v.slice(6)]=npcName()}else R[v]()}}
  render()});
 document.addEventListener('change',ev=>{const el=ev.target;
+ if(el.dataset.look){setLook(el.dataset.look,el.value);render();return}
  if(el.dataset.camp){const k=el.dataset.camp,lim={d:[1,30],m:[1,12],y:[1,9999]}[k];const v=Math.round(+el.value);GM[k]=Number.isFinite(v)?Math.min(lim[1],Math.max(lim[0],v)):{d:1,m:1,y:720}[k];el.value=GM[k];render();return}
  if(el.dataset.years!==undefined){S.years=+el.value;S.ageSet=true;render();return}if(el.dataset.gm){GM[el.dataset.gm]=el.checked;if(!el.checked&&S.folk===el.dataset.gm)S.folk='Human';render();return}
  if(el.dataset.adesc!==undefined){S.abil[+el.dataset.adesc].desc=el.value.trim();render();return}
