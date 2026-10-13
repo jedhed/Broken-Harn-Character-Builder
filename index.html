@@ -864,8 +864,8 @@ function armorText(){const by={};LOC.forEach(([k])=>{const a=S.gear.armor[k];if(
  return Object.entries(by).map(([a,ks])=>a.toLowerCase()+' armour on the '+where(ks)).join(', ')}
 function promptText(){const man=S.sex==='Female'?'woman':S.sex==='Male'?'man':'person';const age=ageSettled()?ageYears():'';
  const who=[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf(),lookPhrase()].filter(Boolean).join(', ');
- const bits=[];if(S.cls)bits.push('wearing '+CLOTHES[S.cls]);const ar=armorText();if(ar)bits.push(ar);
- const held=[...new Set(S.gear.items.filter(x=>x.hand).map(x=>x.n.toLowerCase()))].map(w=>(/^[aeiou]/.test(w)?'an ':'a ')+w);if(held.length)bits.push('carrying '+(held.length>1?held.slice(0,-1).join(', ')+' and '+held[held.length-1]:held[0]));
+ const bits=[];if(S.cls)bits.push('wearing '+CLOTHES[S.cls]);const arms=S.promptArms!==false;const ar=arms?armorText():'';if(ar)bits.push(ar);
+ const held=arms?[...new Set(S.gear.items.filter(x=>x.hand).map(x=>x.n.toLowerCase()))].map(w=>(/^[aeiou]/.test(w)?'an ':'a ')+w):[];if(held.length)bits.push('carrying '+(held.length>1?held.slice(0,-1).join(', ')+' and '+held[held.length-1]:held[0]));
  const L=['Half-length portrait, waist up, in a vertical 3:4 frame, of '+who+'.'];if(S.look&&S.look.feat)L.push('Notable features: '+S.look.feat.replace(/\.?$/,'.'));
  if(S.career)L.push('By calling: '+unesc(careerLine())+'.');if(S.occ)L.push('Family trade: '+S.occ.toLowerCase()+'.');
  if(bits.length)L.push(bits.join('; ').replace(/^./,m=>m.toUpperCase())+'.');if(S.concept)L.push('Concept: '+S.concept.replace(/\.?$/,'.'));
@@ -888,6 +888,7 @@ function copyText(t,msg){const n=$('#promptnote');const done=ok=>{if(n)n.textCon
 function portraitPanel(){const ok=portOK(S.portrait);const ed=S.prompt&&(S.prompt.pos||S.prompt.neg);
  return`<div class="sub"><div class="lab"><span><b>Portrait</b> <span class="hint">optional. It shows in your character roll, and is saved with the character and in the downloaded file.</span></span></div>
   <div class="field"><div class="lab"><span><b>Image prompt</b> <span class="hint">built from your character and the house art style, for whichever image tool you use</span></span></div>
+   <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="parms" data-parms="1" ${S.promptArms!==false?'checked':''}> Show arms and armour. Untick for everyday clothing of your culture and station.</label>
    <label for="ppos" class="hint">Prompt</label><textarea class="text tall" id="ppos" data-prompt="pos" rows="7">${esc(promptPos())}</textarea>
    <label for="pneg" class="hint">Negative prompt <span class="hint">(things to avoid; some tools have a separate box for it)</span></label><textarea class="text" id="pneg" data-prompt="neg" rows="3">${esc(promptNeg())}</textarea>
    <div class="chips"><button class="btn" data-act="pcopy" data-val="pos">Copy prompt</button><button class="btn" data-act="pcopy" data-val="neg">Copy negative prompt</button><button class="btn" data-act="pcopy" data-val="mj">Copy for Midjourney</button><button class="btn" data-act="preset">Rebuild from character</button></div>
@@ -1042,7 +1043,7 @@ function showFormal(){const f=$('#formal');if(!f)return;const t=formalName();f.t
 function setFather(v){S.father=v}
 
 /* ---------- state ---------- */
-const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
+const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},promptArms:true,look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
 let S=blank();
 const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true,pdfDraft:false};
 const AGE_R={Young:[20,29],Adult:[30,49],Old:[50,69]};
@@ -1617,6 +1618,7 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='roll'){if(v==='picks'){const keep=S.picks;R.picks();const b2=BG[S.bg];b2.slots.forEach(sl=>{if((keep[sl.id]||[]).length===sl.n)S.picks[sl.id]=keep[sl.id]});b2.slots.filter(x=>x.not).forEach(x=>{const taken=S.picks[x.not]||[];if((S.picks[x.id]||[]).some(y=>taken.includes(y))){const o=slotOpts(x).slice();const p=[];while(p.length<x.n&&o.length)p.push(o.splice(rnd(o.length)-1,1)[0]);S.picks[x.id]=p}})}else if(v.startsWith('life:'))R.life(v.slice(5));else if(v.startsWith('rel:'))S.life[v.slice(4)].rel=['Friend','Patron','Rival','Adversary'][rnd(4)-1];else if(v.startsWith('lname:'))S.life[v.slice(6)].relName=npcName();else if(v.startsWith('aname:')){if(!S.allyNames)S.allyNames=[];S.allyNames[+v.slice(6)]=npcName()}else R[v]()}}
  render()});
 document.addEventListener('change',ev=>{const el=ev.target;
+ if(el.dataset.parms){S.promptArms=el.checked;render();return}
  if(el.dataset.look){setLook(el.dataset.look,el.value);render();return}
  if(el.dataset.camp){const k=el.dataset.camp,lim={d:[1,30],m:[1,12],y:[1,9999]}[k];const v=Math.round(+el.value);GM[k]=Number.isFinite(v)?Math.min(lim[1],Math.max(lim[0],v)):{d:1,m:1,y:720}[k];el.value=GM[k];render();return}
  if(el.dataset.years!==undefined){S.years=+el.value;S.ageSet=true;render();return}if(el.dataset.gm){GM[el.dataset.gm]=el.checked;if(!el.checked&&S.folk===el.dataset.gm)S.folk='Human';render();return}
