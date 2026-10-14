@@ -884,7 +884,7 @@ function lookPanel(){const l=S.look||newLook(),N=lookNow()||{ht:null,wt:null,fra
   <div class="agerow"><span class="hint">Soft</span><input type="range" id="lk_sl" min="0" max="100" step="1" data-look="sl" value="${N.sl}" aria-label="Build, from soft to muscular"><span class="hint">Muscular</span><input class="text lkword" data-look="word" value="${esc(l.word)}" placeholder="${esc(N.word||'Build word')}" aria-label="Build word"></div>
   <span class="hint">${l.sl===null?slTxt+(N.I.str?' Your Strength aptitude nudges it toward muscular.':''):'Set by hand.'}${l.word?' The build word is yours; clear it to use the suggested one.':N.frame?'':' Roll a frame to get a build word.'}</span></div>
  <div class="field"><div class="lab"><label for="lk_feat"><b>Notable features</b> <span class="hint">optional. A scar, a long beard, a missing ear.</span></label><span id="featcnt" class="hint">${(l.feat||'').length>=160?(l.feat||'').length+' of 200':''}</span></div>
-  <textarea class="text lkfeat" id="lk_feat" rows="3" maxlength="200" data-look="feat" placeholder="Anything someone would notice about them">${esc(l.feat||'')}</textarea></div></div>`}
+  <input class="text" id="lk_feat" maxlength="200" data-look="feat" value="${esc(l.feat||'')}" placeholder="Anything someone would notice about them"></div></div>`}
 /* ---------- portrait and image prompt ---------- */
 /* The house art style for portrait prompts. Edit these two to change every prompt the builder writes. */
 const ART_LEAD='Ink-and-watercolor fantasy character portrait with confident ink outlines and translucent earthy washes.';
@@ -899,13 +899,22 @@ function lookOf(){const c=culture();const p=S.nation==='orbaal'?S.people:'';cons
  if(c==='Tribal')return'in tribal dress of wool, hide and fur';
  if(c==='Imperial')return'in dress influenced by the late Roman empire';
  if(c==='Feudal')return'in the dress of 12th-century northern Europe';return''}
+/* The people and era without the dress, for when the player describes the clothing themselves. */
+function lookPeople(){const c=culture();const p=S.nation==='orbaal'?S.people:'';const jarin=p==='Jarin'||(S.nation==='tribal'&&S.place&&!TRIBE_HARNIC.includes(S.place));
+ if(S.folk==='Khuzdul'||S.folk==='Sindarin')return lookOf();
+ if(c==='Viking'&&p!=='Jarin')return'Norse-looking, of the Viking age';
+ if(jarin)return'Celtic-looking, of the 12th century';
+ if(c==='Tribal')return'of a tribal people of the 12th century';
+ if(c==='Imperial')return'of a Roman-influenced realm in the 12th century';
+ return'of 12th-century northern Europe'}
+const ownCloth=()=>!!(S.promptClothOn&&(S.promptCloth||'').trim());
 const CLOTHES={slave:'plain, rough-spun clothing',serf:'plain peasant clothing',unguilded:'simple, practical clothing',guilded:'good, sturdy clothing of a prosperous tradesperson',noble:'fine clothing that marks high birth'};
 function armorText(){const by={};LOC.forEach(([k])=>{const a=S.gear.armor[k];if(a)(by[a]=by[a]||[]).push(k)});
  const where=ks=>{const w=[];if(ks.includes('Head'))w.push('head');if(ks.includes('Body'))w.push('body');const arms=['LArm','RArm'].filter(k=>ks.includes(k)).length,legs=['LLeg','RLeg'].filter(k=>ks.includes(k)).length;if(arms)w.push(arms===2?'arms':'one arm');if(legs)w.push(legs===2?'legs':'one leg');return w.length>1?w.slice(0,-1).join(', ')+' and '+w[w.length-1]:w[0]};
  return Object.entries(by).map(([a,ks])=>a.toLowerCase()+' armour on the '+where(ks)).join(', ')}
 function promptText(){const man=S.sex==='Female'?'woman':S.sex==='Male'?'man':'person';const age=ageSettled()?ageYears():'';
- const who=(S.folk==='Human'?[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookPhrase(),lookOf()]:[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf(),lookPhrase()]).filter(Boolean).join(', ');
- const bits=[];if(S.cls)bits.push('wearing '+CLOTHES[S.cls]);const arms=S.promptArms!==false;const ar=arms?armorText():'';if(ar)bits.push(ar);
+ const who=(S.folk==='Human'?[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookPhrase(),ownCloth()?lookPeople():lookOf()]:[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf(),lookPhrase()]).filter(Boolean).join(', ');
+ const bits=[];const own=ownCloth();if(own)bits.push('wearing '+S.promptCloth.trim().replace(/^wearing\s+/i,'').replace(/\.$/,''));else if(S.cls)bits.push('wearing '+CLOTHES[S.cls]);const arms=!own&&S.promptArms!==false;const ar=arms?armorText():'';if(ar)bits.push(ar);
  const held=arms?[...new Set(S.gear.items.filter(x=>x.hand).map(x=>x.n.toLowerCase()))].map(w=>(/^[aeiou]/.test(w)?'an ':'a ')+w):[];if(held.length)bits.push('carrying '+(held.length>1?held.slice(0,-1).join(', ')+' and '+held[held.length-1]:held[0]));
  const L=['Half-length portrait, waist up, in a vertical 3:4 frame, of '+who+'.'];{const f=faceSentence();if(f)L.push(f)}if(S.look&&S.look.feat)L.push('Notable features: '+S.look.feat.replace(/\.?$/,'.'));
  if(S.career)L.push('By calling: '+unesc(careerLine())+'.');if(S.occ)L.push('Family trade: '+S.occ.toLowerCase()+'.');
@@ -934,7 +943,9 @@ function copyText(t,msg){const n=$('#promptnote');const done=ok=>{if(n)n.textCon
 function portraitPanel(){const ok=portOK(S.portrait);const ed=S.prompt&&(S.prompt.pos||S.prompt.neg);
  return`<div class="sub"><div class="lab"><span><b>Portrait</b> <span class="hint">optional. It shows in your character roll, and is saved with the character and in the downloaded file.</span></span></div>
   <div class="field"><div class="lab"><span><b>Image prompt</b> <span class="hint">built from your character and the house art style, for whichever image tool you use</span></span></div>
-   <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="parms" data-parms="1" ${S.promptArms!==false?'checked':''}> Show arms and armour. Untick for everyday clothing of your culture and station.</label>
+   <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="parms" data-parms="1" ${S.promptArms!==false?'checked':''} ${ownCloth()?'disabled':''}> Show arms and armour. ${ownCloth()?'<i>Your clothing description replaces this.</i>':'Untick for everyday clothing of your culture and station.'}</label>
+   <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pcloth" data-pcloth="1" ${S.promptClothOn?'checked':''}> Describe the clothing myself</label>
+   ${S.promptClothOn?`<input class="text" id="pclothtxt" data-pclothtxt="1" maxlength="200" value="${esc(S.promptCloth||'')}" placeholder="Clothing, weapons and accessories you want in the picture" aria-label="Clothing, weapons and accessories"><span class="hint">Replaces the clothing for your station, and your armour and weapons. Leave it empty to keep the defaults.</span>`:''}
    <label for="ppos" class="hint">Prompt</label><textarea class="text tall" id="ppos" data-prompt="pos" rows="7">${esc(promptPos())}</textarea>
    <label for="pneg" class="hint">Negative prompt <span class="hint">(things to avoid; some tools have a separate box for it)</span></label><textarea class="text" id="pneg" data-prompt="neg" rows="3">${esc(promptNeg())}</textarea>
    <div class="chips"><button class="btn" data-act="pcopy" data-val="pos">Copy prompt</button><button class="btn" data-act="pcopy" data-val="neg">Copy negative prompt</button><button class="btn" data-act="pcopy" data-val="mj">Copy for Midjourney</button><button class="btn" data-act="preset">Rebuild from character</button></div>
@@ -1089,7 +1100,7 @@ function showFormal(){const f=$('#formal');if(!f)return;const t=formalName();f.t
 function setFather(v){S.father=v}
 
 /* ---------- state ---------- */
-const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},promptArms:true,look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
+const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},promptArms:true,promptClothOn:false,promptCloth:'',look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
 let S=blank();
 const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true,pdfDraft:false};
 const AGE_R={Young:[20,29],Adult:[30,49],Old:[50,69]};
@@ -1671,6 +1682,8 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='roll'){if(v==='picks'){const keep=S.picks;R.picks();const b2=BG[S.bg];b2.slots.forEach(sl=>{if((keep[sl.id]||[]).length===sl.n)S.picks[sl.id]=keep[sl.id]});b2.slots.filter(x=>x.not).forEach(x=>{const taken=S.picks[x.not]||[];if((S.picks[x.id]||[]).some(y=>taken.includes(y))){const o=slotOpts(x).slice();const p=[];while(p.length<x.n&&o.length)p.push(o.splice(rnd(o.length)-1,1)[0]);S.picks[x.id]=p}})}else if(v.startsWith('life:'))R.life(v.slice(5));else if(v.startsWith('rel:'))S.life[v.slice(4)].rel=['Friend','Patron','Rival','Adversary'][rnd(4)-1];else if(v.startsWith('lname:'))S.life[v.slice(6)].relName=npcName();else if(v.startsWith('aname:')){if(!S.allyNames)S.allyNames=[];S.allyNames[+v.slice(6)]=npcName()}else R[v]()}}
  render()});
 document.addEventListener('change',ev=>{const el=ev.target;
+ if(el.dataset.pcloth){S.promptClothOn=el.checked;render();return}
+ if(el.dataset.pclothtxt){S.promptCloth=el.value.replace(/\s+/g,' ').trim().slice(0,200);render();return}
  if(el.dataset.parms){S.promptArms=el.checked;render();return}
  if(el.dataset.look){setLook(el.dataset.look,el.value);render();return}
  if(el.dataset.camp){const k=el.dataset.camp,lim={d:[1,30],m:[1,12],y:[1,9999]}[k];const v=Math.round(+el.value);GM[k]=Number.isFinite(v)?Math.min(lim[1],Math.max(lim[0],v)):{d:1,m:1,y:720}[k];el.value=GM[k];render();return}
