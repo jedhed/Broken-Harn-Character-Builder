@@ -766,7 +766,7 @@ const htTrait=h=>h<=62?'Small':h<=66?'Short':h<=70?'Average':h<=74?'Tall':'Great
 const BUILDW=[['Frail','Gaunt','Thin','Lean','Sinewy'],['Soft','Slight','Slender','Lean','Wiry'],['Soft','Plump','Ordinary','Fit','Athletic'],['Heavyset','Stout','Solid','Stocky','Burly'],['Corpulent','Portly','Big','Hulking','Brawny']];
 const PHYS=['Dodge','Melee: Light','Melee: Medium','Melee: Heavy','Might','Missile','Thrown','Athletics','Endurance','Survival','Track','Ride','Sail/Boat'];
 const SOFTSK=()=>[...CAT.Social,...CAT.Lore];
-const newLook=()=>({cx:'',hair:'',eyes:'',hd:null,ht:null,fr:false,nudge:0,wpos:.5,frame:'',wt:null,hand:'',sl:null,word:'',feat:'',lock:{},cxNew:false});
+const newLook=()=>({cx:'',hair:'',eyes:'',hd:null,ht:null,fr:false,nudge:0,wpos:.5,frame:'',wt:null,hand:'',sl:null,word:'',feat:'',face:'',faceEd:false,hs:'',hsEd:false,lock:{},cxNew:false});
 const LK=()=>S.look||(S.look=newLook());
 const ftIn=h=>Math.floor(h/12)+' ft '+(h%12)+' in ('+Math.round(h*2.54)+' cm)';
 const lbKg=w=>w+' lb ('+Math.round(w*.4536)+' kg)';
@@ -802,18 +802,57 @@ function rollLook(k){const l=LK(),lk=l.lock,one=x=>(!k||k===x)&&!lk[x];
  if(one('ht')){l.hd=rnd(6)+rnd(6)+rnd(6)+rnd(6);l.ht=null}
  if(one('frame')){const r=rnd(6);l.nudge=r===1?-1:r===6?1:0;l.wpos=Math.random();l.frame='';l.wt=null;l.fr=true}
  if(k==='wt'&&!lk.frame){l.wpos=Math.random();l.wt=null;l.fr=true}
+ if(one('hs')&&(k==='hs'||!l.hsEd)){l.hs=rollHair();l.hsEd=false}
+ if(one('face')&&(k==='face'||!l.faceEd)){l.face=rollFace();l.faceEd=false}
  if(one('hand'))l.hand=rnd(200)<=({Human:175,Sindarin:165,Khuzdul:100}[S.folk]||175)?'Right':'Left';
  if(!k)l.cxNew=false}
 function setLook(k,v){const l=LK();
  if(k==='ht'||k==='wt'){const n=Math.round(+v);l[k]=v===''||!Number.isFinite(n)?null:Math.max(k==='ht'?36:40,Math.min(k==='ht'?96:400,n));if(k==='wt')l.fr=true;return}
+ if(k==='hs'){l.hs=String(v).replace(/\s+/g,' ').trim().slice(0,120);l.hsEd=!!l.hs;return}
+ if(k==='face'){l.face=String(v).replace(/\s+/g,' ').trim().slice(0,120);l.faceEd=!!l.face;return}
  if(k==='feat'){l.feat=String(v).replace(/\s+/g,' ').trim().slice(0,200);return}
  if(k==='sl'){l.sl=Math.max(0,Math.min(100,+v||0));return}if(k==='word'){l.word=v.trim();return}
  if(k==='frame'){l.frame=v;l.wt=null;l.fr=true;return}
  if(k==='cx'&&l.cx&&v!==l.cx&&(l.hair||l.eyes))l.cxNew=true;l[k]=v}
 function lookAct(a,v){const l=LK();if(a==='lkroll')rollLook(v||'');else if(a==='lklock')l.lock[v]=!l.lock[v];else if(a==='lkreset')l.sl=null;else if(a==='lkauto')l[v]=v==='frame'?'':null;else if(a==='lkmatch'){rollLook('hair');rollLook('eyes');l.cxNew=false}else if(a==='lkkeep')l.cxNew=false}
 /* Labelled rows for the .md and PDF page 3. */
-function lookRows(){const l=S.look,N=lookNow();if(!l)return[];return[['Complexion',l.cx],['Hair',l.hair],['Eyes',l.eyes],['Height',N.ht===null?'':ftIn(N.ht)+', '+htTrait(N.ht).toLowerCase()],['Weight',N.wt===null?'':lbKg(N.wt)],['Build',N.frame?N.frame+' frame'+(N.word?', '+N.word.toLowerCase():''):''],['Handedness',l.hand?l.hand+'-handed':''],['Notable features',l.feat||'']].filter(r=>r[1])}
+function lookRows(){const l=S.look,N=lookNow();if(!l)return[];return[['Complexion',l.cx],['Hair',l.hair],['Hair style',l.hs||''],['Eyes',l.eyes],['Face',l.face||''],['Height',N.ht===null?'':ftIn(N.ht)+', '+htTrait(N.ht).toLowerCase()],['Weight',N.wt===null?'':lbKg(N.wt)],['Build',N.frame?N.frame+' frame'+(N.word?', '+N.word.toLowerCase():''):''],['Handedness',l.hand?l.hand+'-handed':''],['Notable features',l.feat||'']].filter(r=>r[1])}
 /* For the image prompt: what shows in a picture. */
+/* Face line: two or three ordinary-leaning features, plus facial hair for human men. Rolled with the appearance; the player can edit it. */
+const FACE_T={shape:[['Oval face',3],['Long face',2],['Round face',2],['Square face',2],['Broad face',2],['Narrow face',1],['Heart-shaped face',1],['Angular face',1],['Gaunt face',1]],
+ nose:[['straight nose',3],['broad nose',2],['hooked nose',1],['crooked nose',1],['snub nose',1],['aquiline nose',1],['large nose',1],['flat nose',1],['sharp nose',1],['long nose',1]],
+ eyes:[['heavy brow',2],['deep-set eyes',2],['wide-set eyes',1],['close-set eyes',1],['hooded eyes',1],['bushy brows',1],['thin arched brows',1],['heavy-lidded eyes',1]],
+ jaw:[['strong jaw',2],['thin lips',2],['full lips',2],['weak chin',1],['cleft chin',1],['wide mouth',1],['small mouth',1],['pointed chin',1],['prominent jaw',1]],
+ extra:[['high cheekbones',2],['sunken cheeks',1],['prominent ears',1],['jug ears',1],['gap-toothed',1],['freckled',2]]};
+const pickT=l=>{const t=l.reduce((a,x)=>a+x[1],0);let r=rnd(t);for(const x of l){r-=x[1];if(r<=0)return x[0]}return l[0][0]};
+function rollFace(){const l=LK();const out=[pickT(FACE_T.shape)];const cats=['nose','eyes','jaw'].sort(()=>Math.random()-.5).slice(0,rnd(2));
+ cats.forEach(c=>out.push(pickT(FACE_T[c])));
+ if(rnd(4)===1){let e=pickT(FACE_T.extra);if(e==='freckled'&&!['Very light','Light'].includes(l.cx))e='high cheekbones';out.push(e)}
+ return out.join(', ')}
+/* Hair style row: a fantasy-art take on 12th-century hair, plus facial hair for human men. Feudal and Imperial women wear a framing covering more often the more their skills lean social and lore. */
+const HS={menCommon:[['cropped short',4],['a bowl cut',2],['collar-length and swept back',2],['long, tied at the nape',2],['shoulder-length and loose',1]],
+ menNoble:[['collar-length and swept back',4],['long, tied at the nape',3],['shoulder-length and loose',2],['cropped short',1]],
+ menNorth:[['long with side braids',3],['long and loose',2],['long, tied back',2],["a warrior's topknot",1],['shaved at the sides with a long braid',1]],
+ women:[['two long braids',3],['a long braid over one shoulder',2],['a long single braid',2],['long and loose',2],['coiled braids',1]],
+ womenNorth:[['long and loose with a few braids',3],['many small braids',2],['a thick crown braid',2],['braids woven with beads',1],['braids woven with ribbon',1]],
+ coverNoble:[['under a jewelled circlet',2],['under a simple fillet',2],['with a light veil worn back',1],['in a hair net',1]],
+ cover:[['with a light veil worn back',3],['under a hair net',2],['with a headcloth tied back',1],['under a simple fillet',1],['with a hood pushed back',1]],
+ coverNorth:[['bound with a headband',2],['with a hood pushed back',1]],
+ elf:[['long and loose',3],['finely braided',2],['long, with small braids at the temples',2]],
+ dwarf:[['in thick braids',2],['long and braided',2],['tied back in a heavy braid',2]]};
+function rollHair(){const c=culture();const north=['Viking','Tribal'].includes(c)||S.dual==='ivinia'||orbP()==='Jarin';const fem=S.sex==='Female'?true:S.sex==='Male'?false:rnd(2)===1;let st;
+ if(S.folk==='Sindarin')st=pickT(HS.elf);else if(S.folk==='Khuzdul')st=pickT(HS.dwarf);
+ else if(!fem){st=pickT(north?HS.menNorth:S.cls==='noble'?HS.menNoble:HS.menCommon);if(S.age==='Old'&&rnd(5)===1)st=(rnd(2)===1?'balding, ':'thinning, ')+st;if(rnd(20)===1)st+=', with a hood pushed back'}
+ else{st=pickT(north?HS.womenNorth:HS.women);
+  if(north){if(rnd(10)===1)st+=', '+pickT(HS.coverNorth)}
+  else{const sg=slSuggest(sizeInfo());if(rnd(100)<=Math.round(50-45*sg/100))st+=' '+pickT(S.cls==='noble'?HS.coverNoble:HS.cover)}}
+ if(S.folk==='Human'&&S.sex==='Male')st+='; '+pickT(north?[['clean-shaven',1],['stubble',1],['moustache',1],['short beard',3],['long beard',3]]:[['clean-shaven',3],['stubble',2],['moustache',1],['short beard',3],['long beard',1]]);
+ return st.charAt(0).toUpperCase()+st.slice(1)}
+/* Life on the face, for the prompt only. */
+function weathering(){const outd=['rural','barbarian','wanderer'].includes(S.bg)||['Ranger','Warrior'].includes(S.career)||/farm|hunt|fish|sail|seam|herd|shepherd|miner|charcoal|timber|teamster|pilot|forest|trapper/i.test((S.occ||'')+' '+(S.occ2||''));
+ const soft=!outd&&(S.cls==='noble'||['Loremaster','Speaker','Spellweaver'].includes(S.career));
+ if(S.age==='Old')return outd?'a deeply lined, weathered face':'a lined, ageing face';if(S.age==='Young')return outd?'a youthful, sun-browned face':'a youthful face';return outd?'weathered, sun-lined skin':soft?'soft, smooth skin':''}
+function faceSentence(){const l=S.look;const bits=[];if(l&&l.face)bits.push(l.face.replace(/\.$/,''));const w=weathering();if(w)bits.push(w);let t=bits.length?'Face: '+bits.join('; ')+'.':'';if(l&&l.hs)t+=(t?' ':'')+'Hair: '+l.hs.replace(/\.$/,'')+'.';if(!wantsBeauty())t+=(t?' ':'')+'An ordinary, individual face with irregular, asymmetrical features, not idealised.';return t}
 function lookPhrase(){const l=S.look,N=lookNow();if(!l)return'';const SK={'Very light':'very pale, fair skin','Light':'fair skin','Medium':'lightly olive, northern European skin','Dark':'olive, sun-darkened Mediterranean skin, like a southern Spaniard or Italian','Very dark':'dark brown skin of African descent'};
  const f=[l.cx?SK[l.cx]:'',l.hair?l.hair.toLowerCase()+' hair':'',l.eyes?l.eyes.toLowerCase()+' eyes':''].filter(Boolean);const out=[];
  if(f.length)out.push('with '+(f.length>1?f.slice(0,-1).join(', ')+' and '+f[f.length-1]:f[0]));
@@ -834,7 +873,9 @@ function lookPanel(){const l=S.look||newLook(),N=lookNow()||{ht:null,wt:null,fra
  <div class="lkrows">
  ${row('cx','Complexion',sel('cx',CXS),orbMixed()&&S.folk==='Human'?'between your Ivinian and Jarin parents':'')}
  ${row('hair','Hair',sel('hair',HAIRS))}
+ ${row('hs','Hair style',`<input class="text" id="lk_hs" data-look="hs" maxlength="120" value="${esc(l.hs||'')}" placeholder="Rolled with your appearance">`,l.hsEd?'Your own words. Reroll to replace them.':'Rolled, with facial hair for men. Edit it to make it yours.')}
  ${row('eyes','Eyes',sel('eyes',EYES))}
+ ${row('face','Face',`<input class="text" id="lk_face" data-look="face" maxlength="120" value="${esc(l.face||'')}" placeholder="Rolled with your appearance">`,l.faceEd?'Your own words. Reroll to replace them.':'Rolled. Edit it to make it yours; Roll appearance then leaves it alone.')}
  ${row('ht','Height',`<input class="text lknum" type="number" id="lk_ht" min="36" max="96" data-look="ht" value="${N.ht===null?'':N.ht}" aria-label="Height in inches"> <span class="hint lkunit">in</span>`,htHint)}
  ${row('frame','Frame',`<select id="lk_frame" data-look="frame">${`<option value="" ${l.frame?'':'selected'}>${l.fr||l.frame?'Follow skills'+(N.auto&&N.frame?' ('+N.frame+')':''):'Not rolled'}</option>`+FRAMES.map(x=>`<option ${x===l.frame?'selected':''}>${x}</option>`).join('')}</select> <input class="text lknum" type="number" min="40" max="400" data-look="wt" value="${N.wt===null?'':N.wt}" aria-label="Weight in pounds"> <span class="hint lkunit">lb</span>`,[frHint,wtHint].filter(Boolean).join('<br>'))}
  ${row('hand','Handedness',sel('hand',['Right','Left']),'Ambidextrous is a Talent, not a roll.')}
@@ -846,8 +887,8 @@ function lookPanel(){const l=S.look||newLook(),N=lookNow()||{ht:null,wt:null,fra
   <textarea class="text lkfeat" id="lk_feat" rows="3" maxlength="200" data-look="feat" placeholder="Anything someone would notice about them">${esc(l.feat||'')}</textarea></div></div>`}
 /* ---------- portrait and image prompt ---------- */
 /* The house art style for portrait prompts. Edit these two to change every prompt the builder writes. */
-const ART_LEAD='Ink-and-watercolor fantasy character portrait with varied ink outlines, translucent earthy washes and a scratchy, textured surface.';
-const ART_STYLE='Hand-drawn fantasy character portrait in a traditional ink-and-watercolor illustration style. Naturalistic anatomy and facial proportions with subtle storybook stylization. Expressive dark ink contours with varied line weight, fine interior sketch lines, and loose hatching following the forms. Translucent watercolor washes layered with dry-brush and colored-pencil-like texture; visible pigment grain, irregular strokes, and softly mottled color. A restrained, earthy palette with muted colors, warm undertones, and subtle rosy accents. Soft, diffuse lighting, gently modeled shadows, and small, selectively placed highlights. Tactile rendering of skin, hair, fabric, leather, and metal, with detail concentrated around the face. An illustrative, handmade finish with crisp outlines and softly painted interiors. An isolated figure against a clean white background, with a readable silhouette and no scenery.';
+const ART_LEAD='Ink-and-watercolor fantasy character portrait with confident ink outlines and translucent earthy washes.';
+const ART_STYLE='Hand-drawn fantasy character portrait in a traditional ink-and-watercolor illustration style, with subtle storybook stylization and individual, characterful faces. Clean, expressive dark ink contours with varied line weight and light hatching only in the shadows. Smooth, translucent watercolor washes with gentle color variation and a faint hint of brush texture. A restrained, earthy palette with muted colors, warm undertones and subtle rosy accents. Soft, diffuse lighting, gently modeled shadows and small, selectively placed highlights. Detail concentrated around the face. An illustrative finish with crisp outlines and softly painted interiors. An isolated figure against a clean white background, with a readable silhouette and no scenery.';
 const ART_NEG='Photorealism, 3D rendering, glossy digital airbrushing, plastic skin, anime proportions, oversized eyes, flat vector fills, perfectly uniform outlines, neon colors, dramatic cinematic lighting, excessive bloom, elaborate background.';
 /* What an image generator can use: things that show in a picture, plus a hint of temperament. Hârn names mean nothing to it, so peoples are described by look and dress. */
 function lookOf(){const c=culture();const p=S.nation==='orbaal'?S.people:'';const jarin=p==='Jarin'||(S.nation==='tribal'&&S.place&&!TRIBE_HARNIC.includes(S.place));
@@ -863,15 +904,20 @@ function armorText(){const by={};LOC.forEach(([k])=>{const a=S.gear.armor[k];if(
  const where=ks=>{const w=[];if(ks.includes('Head'))w.push('head');if(ks.includes('Body'))w.push('body');const arms=['LArm','RArm'].filter(k=>ks.includes(k)).length,legs=['LLeg','RLeg'].filter(k=>ks.includes(k)).length;if(arms)w.push(arms===2?'arms':'one arm');if(legs)w.push(legs===2?'legs':'one leg');return w.length>1?w.slice(0,-1).join(', ')+' and '+w[w.length-1]:w[0]};
  return Object.entries(by).map(([a,ks])=>a.toLowerCase()+' armour on the '+where(ks)).join(', ')}
 function promptText(){const man=S.sex==='Female'?'woman':S.sex==='Male'?'man':'person';const age=ageSettled()?ageYears():'';
- const who=[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf(),lookPhrase()].filter(Boolean).join(', ');
+ const who=(S.folk==='Human'?[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookPhrase(),lookOf()]:[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf(),lookPhrase()]).filter(Boolean).join(', ');
  const bits=[];if(S.cls)bits.push('wearing '+CLOTHES[S.cls]);const arms=S.promptArms!==false;const ar=arms?armorText():'';if(ar)bits.push(ar);
  const held=arms?[...new Set(S.gear.items.filter(x=>x.hand).map(x=>x.n.toLowerCase()))].map(w=>(/^[aeiou]/.test(w)?'an ':'a ')+w):[];if(held.length)bits.push('carrying '+(held.length>1?held.slice(0,-1).join(', ')+' and '+held[held.length-1]:held[0]));
- const L=['Half-length portrait, waist up, in a vertical 3:4 frame, of '+who+'.'];if(S.look&&S.look.feat)L.push('Notable features: '+S.look.feat.replace(/\.?$/,'.'));
+ const L=['Half-length portrait, waist up, in a vertical 3:4 frame, of '+who+'.'];{const f=faceSentence();if(f)L.push(f)}if(S.look&&S.look.feat)L.push('Notable features: '+S.look.feat.replace(/\.?$/,'.'));
  if(S.career)L.push('By calling: '+unesc(careerLine())+'.');if(S.occ)L.push('Family trade: '+S.occ.toLowerCase()+'.');
  if(bits.length)L.push(bits.join('; ').replace(/^./,m=>m.toUpperCase())+'.');if(S.concept)L.push('Concept: '+S.concept.replace(/\.?$/,'.'));
  if(S.traits.length)L.push('Expression and bearing: '+S.traits.map(t=>t.toLowerCase()).join(', ')+'.');
  return ART_LEAD+' '+L.join(' ')+' '+ART_STYLE}
-const promptPos=()=>S.prompt&&S.prompt.pos||promptText();const promptNeg=()=>S.prompt&&S.prompt.neg||ART_NEG;
+/* Words that mean the player wants a good-looking face. If the Face line or Notable features has one, the prompt stops pushing toward plain. Add to this list freely. */
+const BEAUTY_WORDS=['beaut','handsome','pretty','lovely','striking','comely','fair-faced','fair of face','attractive','gorgeous','elegant','fine-featured','fine features','chiselled','chiseled','dashing','radiant','stunning'];
+const wantsBeauty=()=>{const t=((S.look&&S.look.face)||'')+' '+((S.look&&S.look.feat)||'');const x=t.toLowerCase();return BEAUTY_WORDS.some(w=>x.includes(w))};
+const ART_NEG_EXTRA='heavy paper texture, grainy texture, rough sketch, messy scratchy linework';
+const negText=()=>ART_NEG.replace(/\.$/,'')+(wantsBeauty()?'':', idealised beauty, model-like face, symmetrical face')+', '+ART_NEG_EXTRA+'.';
+const promptPos=()=>S.prompt&&S.prompt.pos||promptText();const promptNeg=()=>S.prompt&&S.prompt.neg||negText();
 const promptMj=()=>promptPos().replace(/\s+/g,' ').trim()+' --ar 3:4 --no '+promptNeg().replace(/\.$/,'');
 /* A stored portrait must be a JPEG data URL the app made itself. Anything else is dropped. */
 const portOK=p=>typeof p==='string'&&p.length<1500000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(p);
@@ -1634,7 +1680,7 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.given){S.given=el.value.trim();render();return}
  if(el.dataset.nhand){S.nameHand=el.checked;if(el.checked&&!S.handName)S.handName=everyday();render();return}
  if(el.dataset.handname){S.handName=el.value.trim();render();return}
- if(el.dataset.prompt){const k=el.dataset.prompt;const gen=k==='pos'?promptText():ART_NEG;if(!S.prompt)S.prompt={pos:'',neg:''};S.prompt[k]=el.value.trim()===gen.trim()?'':el.value.trim();saveNow();const n=$('#promptnote');if(n)n.textContent=S.prompt.pos||S.prompt.neg?'Your edit is kept. Rebuild from character to start again from the character.':'';return}
+ if(el.dataset.prompt){const k=el.dataset.prompt;const gen=k==='pos'?promptText():negText();if(!S.prompt)S.prompt={pos:'',neg:''};S.prompt[k]=el.value.trim()===gen.trim()?'':el.value.trim();saveNow();const n=$('#promptnote');if(n)n.textContent=S.prompt.pos||S.prompt.neg?'Your edit is kept. Rebuild from character to start again from the character.':'';return}
  if(el.id==='portfile'){addPortrait(el.files&&el.files[0]);el.value='';return}
  if(el.dataset.lname){const l=S.life[el.dataset.lname];if(l)l.relName=el.value.trim();render();return}
  if(el.dataset.aname!==undefined){if(!S.allyNames)S.allyNames=[];S.allyNames[+el.dataset.aname]=el.value.trim();render();return}
