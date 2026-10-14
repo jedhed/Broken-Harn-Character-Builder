@@ -908,17 +908,19 @@ function lookPeople(){const c=culture();const p=S.nation==='orbaal'?S.people:'';
  if(c==='Imperial')return'of a Roman-influenced realm in the 12th century';
  return'of 12th-century northern Europe'}
 const ownCloth=()=>!!(S.promptClothOn&&(S.promptCloth||'').trim());
+/* Own clothing replaces the defaults only when arms and armour are off; with them on, it is added as extra detail. */
+const clothReplaces=()=>ownCloth()&&S.promptArms===false;
 const CLOTHES={slave:'plain, rough-spun clothing',serf:'plain peasant clothing',unguilded:'simple, practical clothing',guilded:'good, sturdy clothing of a prosperous tradesperson',noble:'fine clothing that marks high birth'};
 function armorText(){const by={};LOC.forEach(([k])=>{const a=S.gear.armor[k];if(a)(by[a]=by[a]||[]).push(k)});
  const where=ks=>{const w=[];if(ks.includes('Head'))w.push('head');if(ks.includes('Body'))w.push('body');const arms=['LArm','RArm'].filter(k=>ks.includes(k)).length,legs=['LLeg','RLeg'].filter(k=>ks.includes(k)).length;if(arms)w.push(arms===2?'arms':'one arm');if(legs)w.push(legs===2?'legs':'one leg');return w.length>1?w.slice(0,-1).join(', ')+' and '+w[w.length-1]:w[0]};
  return Object.entries(by).map(([a,ks])=>a.toLowerCase()+' armour on the '+where(ks)).join(', ')}
 function promptText(){const man=S.sex==='Female'?'woman':S.sex==='Male'?'man':'person';const age=ageSettled()?ageYears():'';
- const who=(S.folk==='Human'?[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookPhrase(),ownCloth()?lookPeople():lookOf()]:[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf(),lookPhrase()]).filter(Boolean).join(', ');
- const bits=[];const own=ownCloth();if(own)bits.push('wearing '+S.promptCloth.trim().replace(/^wearing\s+/i,'').replace(/\.$/,''));else if(S.cls)bits.push('wearing '+CLOTHES[S.cls]);const arms=!own&&S.promptArms!==false;const ar=arms?armorText():'';if(ar)bits.push(ar);
+ const who=(S.folk==='Human'?[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookPhrase(),clothReplaces()?lookPeople():lookOf()]:[(age?'a '+age+'-year-old ':S.age==='Old'?'an older ':'a ')+man,lookOf(),lookPhrase()]).filter(Boolean).join(', ');
+ const bits=[];const own=clothReplaces();const ownTxt=ownCloth()?S.promptCloth.trim().replace(/^wearing\s+/i,'').replace(/\.$/,''):'';if(own)bits.push('wearing '+ownTxt);else if(S.cls)bits.push('wearing '+CLOTHES[S.cls]);const arms=!own&&S.promptArms!==false;const ar=arms?armorText():'';if(ar)bits.push(ar);
  const held=arms?[...new Set(S.gear.items.filter(x=>x.hand).map(x=>x.n.toLowerCase()))].map(w=>(/^[aeiou]/.test(w)?'an ':'a ')+w):[];if(held.length)bits.push('carrying '+(held.length>1?held.slice(0,-1).join(', ')+' and '+held[held.length-1]:held[0]));
  const L=['Half-length portrait, waist up, in a vertical 3:4 frame, of '+who+'.'];{const f=faceSentence();if(f)L.push(f)}if(S.look&&S.look.feat)L.push('Notable features: '+S.look.feat.replace(/\.?$/,'.'));
  if(S.career)L.push('By calling: '+unesc(careerLine())+'.');if(S.occ)L.push('Family trade: '+S.occ.toLowerCase()+'.');
- if(bits.length)L.push(bits.join('; ').replace(/^./,m=>m.toUpperCase())+'.');if(S.concept)L.push('Concept: '+S.concept.replace(/\.?$/,'.'));
+ if(bits.length)L.push(bits.join('; ').replace(/^./,m=>m.toUpperCase())+'.');if(ownTxt&&!own)L.push('Also: '+ownTxt+'.');if(S.concept)L.push('Concept: '+S.concept.replace(/\.?$/,'.'));
  if(S.traits.length)L.push('Expression and bearing: '+S.traits.map(t=>t.toLowerCase()).join(', ')+'.');
  return ART_LEAD+' '+L.join(' ')+' '+ART_STYLE}
 /* Words that mean the player wants a good-looking face. If the Face line or Notable features has one, the prompt stops pushing toward plain. Add to this list freely. */
@@ -943,9 +945,9 @@ function copyText(t,msg){const n=$('#promptnote');const done=ok=>{if(n)n.textCon
 function portraitPanel(){const ok=portOK(S.portrait);const ed=S.prompt&&(S.prompt.pos||S.prompt.neg);
  return`<div class="sub"><div class="lab"><span><b>Portrait</b> <span class="hint">optional. It shows in your character roll, and is saved with the character and in the downloaded file.</span></span></div>
   <div class="field"><div class="lab"><span><b>Image prompt</b> <span class="hint">built from your character and the house art style, for whichever image tool you use</span></span></div>
-   <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="parms" data-parms="1" ${S.promptArms!==false?'checked':''} ${ownCloth()?'disabled':''}> Show arms and armour. ${ownCloth()?'<i>Your clothing description replaces this.</i>':'Untick for everyday clothing of your culture and station.'}</label>
-   <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pcloth" data-pcloth="1" ${S.promptClothOn?'checked':''}> Describe the clothing myself</label>
-   ${S.promptClothOn?`<input class="text" id="pclothtxt" data-pclothtxt="1" maxlength="200" value="${esc(S.promptCloth||'')}" placeholder="Clothing, weapons and accessories you want in the picture" aria-label="Clothing, weapons and accessories"><span class="hint">Replaces the clothing for your station, and your armour and weapons. Leave it empty to keep the defaults.</span>`:''}
+   <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="parms" data-parms="1" ${S.promptArms!==false?'checked':''}> Show arms and armour. Untick for everyday clothing of your culture and station.</label>
+   <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pcloth" data-pcloth="1" ${S.promptClothOn?'checked':''}> Add my own clothing details</label>
+   ${S.promptClothOn?`<input class="text" id="pclothtxt" data-pclothtxt="1" maxlength="200" value="${esc(S.promptCloth||'')}" placeholder="${S.promptArms!==false?'A blue and white plume on his helm':'A red gown with a gold girdle, a dagger at her belt'}" aria-label="Your clothing details"><span class="hint">${S.promptArms!==false?'Added to your clothing, armour and weapons, e.g. a blue and white plume on his helm.':'Replaces the clothing for your station. Include any weapons or accessories you want shown.'}</span>`:''}
    <label for="ppos" class="hint">Prompt</label><textarea class="text tall" id="ppos" data-prompt="pos" rows="7">${esc(promptPos())}</textarea>
    <label for="pneg" class="hint">Negative prompt <span class="hint">(things to avoid; some tools have a separate box for it)</span></label><textarea class="text" id="pneg" data-prompt="neg" rows="3">${esc(promptNeg())}</textarea>
    <div class="chips"><button class="btn" data-act="pcopy" data-val="pos">Copy prompt</button><button class="btn" data-act="pcopy" data-val="neg">Copy negative prompt</button><button class="btn" data-act="pcopy" data-val="mj">Copy for Midjourney</button><button class="btn" data-act="preset">Rebuild from character</button></div>
