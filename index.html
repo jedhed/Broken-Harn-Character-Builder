@@ -823,7 +823,7 @@ const FACE_T={shape:[['Oval face',3],['Long face',2],['Round face',2],['Square f
  nose:[['straight nose',3],['broad nose',2],['hooked nose',1],['crooked nose',1],['snub nose',1],['aquiline nose',1],['large nose',1],['flat nose',1],['sharp nose',1],['long nose',1]],
  eyes:[['heavy brow',2],['deep-set eyes',2],['wide-set eyes',1],['close-set eyes',1],['hooded eyes',1],['bushy brows',1],['thin arched brows',1],['heavy-lidded eyes',1]],
  jaw:[['strong jaw',2],['thin lips',2],['full lips',2],['weak chin',1],['cleft chin',1],['wide mouth',1],['small mouth',1],['pointed chin',1],['prominent jaw',1]],
- extra:[['high cheekbones',2],['sunken cheeks',1],['prominent ears',1],['jug ears',1],['gap-toothed',1],['freckled',2]]};
+ extra:[['high cheekbones',2],['sunken cheeks',1],['prominent ears',2],['freckled',3],['jug ears',1],['gap-toothed',1]]};
 const pickT=l=>{const t=l.reduce((a,x)=>a+x[1],0);let r=rnd(t);for(const x of l){r-=x[1];if(r<=0)return x[0]}return l[0][0]};
 function rollFace(){const l=LK();const out=[pickT(FACE_T.shape)];const cats=['nose','eyes','jaw'].sort(()=>Math.random()-.5).slice(0,rnd(2));
  cats.forEach(c=>out.push(pickT(FACE_T[c])));
@@ -852,7 +852,7 @@ function rollHair(){const c=culture();const north=['Viking','Tribal'].includes(c
 function weathering(){const outd=['rural','barbarian','wanderer'].includes(S.bg)||['Ranger','Warrior'].includes(S.career)||/farm|hunt|fish|sail|seam|herd|shepherd|miner|charcoal|timber|teamster|pilot|forest|trapper/i.test((S.occ||'')+' '+(S.occ2||''));
  const soft=!outd&&(S.cls==='noble'||['Loremaster','Speaker','Spellweaver'].includes(S.career));
  if(S.age==='Old')return outd?'a deeply lined, weathered face':'a lined, ageing face';if(S.age==='Young')return outd?'a youthful, sun-browned face':'a youthful face';return outd?'weathered, sun-lined skin':soft?'soft, smooth skin':''}
-function faceSentence(){const l=S.look;const bits=[];if(l&&l.face)bits.push(l.face.replace(/\.$/,''));const w=weathering();if(w)bits.push(w);let t=bits.length?'Face: '+bits.join('; ')+'.':'';if(l&&l.hs)t+=(t?' ':'')+'Hair: '+l.hs.replace(/\.$/,'')+'.';if(!wantsBeauty())t+=(t?' ':'')+'An ordinary, individual face with irregular, asymmetrical features, not idealised.';return t}
+function faceSentence(){const l=S.look;const bits=[];if(l&&l.face)bits.push(l.face.replace(/\.$/,''));const w=weathering();if(w)bits.push(w);let t=bits.length?'Face: '+bits.join('; ')+'.':'';if(l&&l.hs)t+=(t?' ':'')+'Hair: '+l.hs.replace(/\.$/,'')+'.';if(!wantsBeauty())t+=(t?' ':'')+'A realistic, ordinary face with natural imperfections, not idealised.';return t}
 function lookPhrase(){const l=S.look,N=lookNow();if(!l)return'';const SK={'Very light':'very pale, fair skin','Light':'fair skin','Medium':'lightly olive, northern European skin','Dark':'olive, sun-darkened Mediterranean skin, like a southern Spaniard or Italian','Very dark':'dark brown skin of African descent'};
  const f=[l.cx?SK[l.cx]:'',l.hair?l.hair.toLowerCase()+' hair':'',l.eyes?l.eyes.toLowerCase()+' eyes':''].filter(Boolean);const out=[];
  if(f.length)out.push('with '+(f.length>1?f.slice(0,-1).join(', ')+' and '+f[f.length-1]:f[0]));
@@ -888,7 +888,7 @@ function lookPanel(){const l=S.look||newLook(),N=lookNow()||{ht:null,wt:null,fra
 /* ---------- portrait and image prompt ---------- */
 /* The house art style for portrait prompts. Edit these two to change every prompt the builder writes. */
 const ART_LEAD='Ink-and-watercolor fantasy character portrait with confident ink outlines and translucent earthy washes.';
-const ART_STYLE='Hand-drawn fantasy character portrait in a traditional ink-and-watercolor illustration style, with subtle storybook stylization and individual, characterful faces. Clean, expressive dark ink contours with varied line weight and light hatching only in the shadows. Smooth, translucent watercolor washes with gentle color variation and a faint hint of brush texture. A restrained, earthy palette with muted colors, warm undertones and subtle rosy accents. Soft, diffuse lighting, gently modeled shadows and small, selectively placed highlights. Detail concentrated around the face. An illustrative finish with crisp outlines and softly painted interiors. An isolated figure against a clean white background, with a readable silhouette and no scenery.';
+const ART_STYLE='Hand-drawn fantasy character portrait in a traditional ink-and-watercolor illustration style, with a touch of illustrative stylization, naturalistic proportions and realistic, individual faces. Expressive dark ink contours with varied line weight and light hatching only in the shadows. Translucent watercolor washes with gentle color variation and visible watercolor pigment on paper, with a faint hint of brush texture. A restrained, earthy palette with muted colors, warm undertones and subtle rosy accents. Soft, diffuse lighting, gently modeled shadows and small, selectively placed highlights. Detail concentrated around the face. An illustrative finish with crisp outlines and softly painted interiors. An isolated figure against a clean white background, with a readable silhouette and no scenery.';
 const ART_NEG='Photorealism, 3D rendering, glossy digital airbrushing, plastic skin, anime proportions, oversized eyes, flat vector fills, perfectly uniform outlines, neon colors, dramatic cinematic lighting, excessive bloom, elaborate background.';
 /* What an image generator can use: things that show in a picture, plus a hint of temperament. Hârn names mean nothing to it, so peoples are described by look and dress. */
 function lookOf(){const c=culture();const p=S.nation==='orbaal'?S.people:'';const jarin=p==='Jarin'||(S.nation==='tribal'&&S.place&&!TRIBE_HARNIC.includes(S.place));
@@ -915,7 +915,7 @@ function promptText(){const man=S.sex==='Female'?'woman':S.sex==='Male'?'man':'p
 /* Words that mean the player wants a good-looking face. If the Face line or Notable features has one, the prompt stops pushing toward plain. Add to this list freely. */
 const BEAUTY_WORDS=['beaut','handsome','pretty','lovely','striking','comely','fair-faced','fair of face','attractive','gorgeous','elegant','fine-featured','fine features','chiselled','chiseled','dashing','radiant','stunning'];
 const wantsBeauty=()=>{const t=((S.look&&S.look.face)||'')+' '+((S.look&&S.look.feat)||'');const x=t.toLowerCase();return BEAUTY_WORDS.some(w=>x.includes(w))};
-const ART_NEG_EXTRA='heavy paper texture, grainy texture, rough sketch, messy scratchy linework';
+const ART_NEG_EXTRA='heavy paper texture, grainy texture, messy scratchy linework, cartoon, caricature, exaggerated features, comic book style, chibi';
 const negText=()=>ART_NEG.replace(/\.$/,'')+(wantsBeauty()?'':', idealised beauty, model-like face, symmetrical face')+', '+ART_NEG_EXTRA+'.';
 const promptPos=()=>S.prompt&&S.prompt.pos||promptText();const promptNeg=()=>S.prompt&&S.prompt.neg||negText();
 const promptMj=()=>promptPos().replace(/\s+/g,' ').trim()+' --ar 3:4 --no '+promptNeg().replace(/\.$/,'');
