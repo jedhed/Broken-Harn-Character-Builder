@@ -289,7 +289,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-14';
+const APPVER='2026.10.17-15';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1030,9 +1030,9 @@ function tgPanel(){const tr=S.traits,full=tr.length>=3;const sw=signWords();cons
    <span class="hint">Make it specific, something you do yourself, and something that can be finished.</span></div>
   <div class="field"><div class="lab"><b>Or build one in three steps</b></div>
    <div class="gbuild">
-    <label for="gwant">I want to</label><input class="text" id="gwant" placeholder="avenge my brother" value="${esc(goalDraft?goalDraft.want:'')}">${goalDraft?`<span></span><span class="hint">Tied to: ${esc(goalDraft.label)}. Finish the goal below.</span>`:''}
-    <label for="gblock">Despite</label><input class="text" id="gblock" placeholder="his hideout being well guarded (optional)">
-    <label for="gdo">I will</label><input class="text" id="gdo" placeholder="pick off his scouts and lieutenants">
+    <label for="gwant">I want to</label><input class="text" id="gwant" value="${esc(goalDraft?goalDraft.want:'')}">${goalDraft?`<span></span><span class="hint">Tied to: ${esc(goalDraft.label)}. Finish the goal below.</span>`:''}
+    <label for="gblock">Despite <span class="hint">optional</span></label><input class="text" id="gblock">
+    <label for="gdo">I will</label><input class="text" id="gdo">
    </div>
    <div class="result gprev" id="gprev" hidden></div>
    <div class="chips"><button class="btn" data-act="goalbuild">Combine into a goal</button></div></div>
