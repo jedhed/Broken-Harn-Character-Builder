@@ -16,6 +16,7 @@
   --header:#1E4266; --on:#FFFFFF; --primary:#1C181A; --onp:#FFFFFF;
   --ok:#2F7676; --ok-t:#2F7676; --warn:#8F6414; --warn-t:#8F6414; --bad:#A8322A; --bad-t:#A8322A;
   --house:#7E4210; --lock:#8A8380; --sel:#EAF3F0; --trait:#2A4296;
+  --lv-g:#A39E99; --lv-n:#8CC63F; --lv-p:#3D7FE6; --lv-r:#7B3FB0;
   --head:"Grenze",Georgia,serif;
   --body:"Bitter",Georgia,serif;
 }
@@ -26,6 +27,7 @@
     --header:#2A568A; --on:#FFFFFF; --primary:#EFE8DB; --onp:#1B1819;
     --ok:#2F7F7F; --ok-t:#6FC2C0; --warn:#8F6414; --warn-t:#D9A94A; --bad:#B43A30; --bad-t:#F0897D;
     --house:#E0A070; --lock:#7C7572; --sel:#22373A; --trait:#9FB2F2; color-scheme:dark;
+    --lv-g:#7C7572; --lv-n:#5DB760; --lv-p:#5A86F0; --lv-r:#A97BE0;
   }
 }
 :root[data-theme="dark"]{
@@ -34,6 +36,7 @@
     --header:#2A568A; --on:#FFFFFF; --primary:#EFE8DB; --onp:#1B1819;
     --ok:#2F7F7F; --ok-t:#6FC2C0; --warn:#8F6414; --warn-t:#D9A94A; --bad:#B43A30; --bad-t:#F0897D;
     --house:#E0A070; --lock:#7C7572; --sel:#22373A; --trait:#9FB2F2; color-scheme:dark;
+    --lv-g:#7C7572; --lv-n:#5DB760; --lv-p:#5A86F0; --lv-r:#A97BE0;
 }
 *{box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);font:400 15px/1.45 var(--body);padding-inline:16px;padding-block:20px 48px;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
@@ -113,6 +116,10 @@ button.link{border:0;background:none;padding:0;color:var(--ink);text-decoration:
 .sp{display:grid;grid-template-columns:minmax(0,1fr) 3ch auto 4ch auto 3ch;gap:6px;align-items:center}
 .sp .add{color:var(--ok-t);font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
 .sp b{text-align:right;font-variant-numeric:tabular-nums}
+/* Skill level dot: Green (gray here), Novice, Proficient, Reliable, from the rulebook's Skill Competency table. */
+.lv{display:inline-block;width:.6em;height:.6em;border-radius:50%;margin-right:.45em;vertical-align:.05em;flex:none}
+.lv-g{background:var(--lv-g)}.lv-n{background:var(--lv-n)}.lv-p{background:var(--lv-p)}.lv-r{background:var(--lv-r)}
+.lvkey{display:flex;flex-wrap:wrap;gap:2px 14px;margin:2px 0 6px}
 .btn.mini{padding:1px 8px;font-size:15.5px}
 .btn:disabled{background:var(--hair);border-color:var(--hair);color:var(--muted);cursor:not-allowed}
 .sub{border-top:1px solid var(--hair);padding-top:12px;display:flex;flex-direction:column;gap:12px}
@@ -275,7 +282,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-3';
+const APPVER='2026.10.17-4';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -627,7 +634,7 @@ function magicPanel(){const w=S.sw;const stp=(act,x,n,up,lbl)=>`<button class="b
   <div class="field"><div class="lab"><span><b>Binds</b> <span class="hint">+10 to each. What you do to the world.</span></span>${cChosen(w.binds.length,2)}</div><div class="chips">${BINDS.map(b=>chip(b,w.binds.includes(b),'swb',b,'',w.binds.length>=2&&!w.binds.includes(b))).join('')}</div></div>
   <div class="field"><div class="lab"><span><b>Strands</b> <span class="hint">What you act upon.</span></span>${cChosen(w.strands.length,4)}</div><div class="chips">${STRANDS.map(x=>chip(x,w.strands.includes(x),'sws',x,'',(w.strands.length>=4&&!w.strands.includes(x))||w.thin.includes(x))).join('')}</div></div>
   <div class="field"><div class="lab"><span><b>Thin Strands</b> <span class="hint">Hard for you. They cannot be raised now and cost double later.</span></span>${cChosen(w.thin.length,2)}</div><div class="chips">${STRANDS.map(x=>chip(x,w.thin.includes(x),'swt',x,lifeLv(x)?'keeps '+lifeLv(x):'',(w.thin.length>=2&&!w.thin.includes(x))||w.strands.includes(x))).join('')}</div></div>
-  <div class="field"><div class="lab"><b>Bind points</b><span class="chips" style="align-items:center"><span class="hint">70 at most in any Bind</span>${cLeft(100-sum(w.bp),100)}</span></div><div class="spg">${BINDS.map(b=>{const k='Bind: '+b,base=baseVal(k),n=w.bp[b]||0;return`<div class="sp"><span>${b}</span><span class="hint">${base}</span>${stp('bp',b,n,5,b)}<span class="add">${n?'+'+n:''}</span><button class="btn mini" data-act="bp" data-val="${b}|5" ${100-sum(w.bp)<=0||base+n>=70?'disabled':''} aria-label="Add 5 to ${b}">+5</button><b>${Math.min(70,base+n)}</b></div>`}).join('')}</div></div>
+  <div class="field"><div class="lab"><b>Bind points</b><span class="chips" style="align-items:center"><span class="hint">70 at most in any Bind</span>${cLeft(100-sum(w.bp),100)}</span></div>${LVKEY}<div class="spg">${BINDS.map(b=>{const k='Bind: '+b,base=baseVal(k),n=w.bp[b]||0;return`<div class="sp"><span>${lvDot(Math.min(70,base+n))}${b}</span><span class="hint">${base}</span>${stp('bp',b,n,5,b)}<span class="add">${n?'+'+n:''}</span><button class="btn mini" data-act="bp" data-val="${b}|5" ${100-sum(w.bp)<=0||base+n>=70?'disabled':''} aria-label="Add 5 to ${b}">+5</button><b>${Math.min(70,base+n)}</b></div>`}).join('')}</div></div>
   <div class="field"><div class="lab"><b>Strand levels</b><span class="chips" style="align-items:center"><span class="hint">for your four Strands, 5 at most</span>${cLeft(10-sum(w.sl),10)}</span></div>${w.strands.length?`<div class="spg">${w.strands.map(x=>{const n=w.sl[x]||0;return`<div class="sp"><span>${x}</span><span class="hint">${lifeLv(x)+(w.sx[x]||0)}</span>${stp('sl',x,n,1,x)}<span class="add">${n?'+'+n:''}</span><button class="btn mini" data-act="sl" data-val="${x}|1" ${10-sum(w.sl)<=0||strandLv(x)>=5?'disabled':''} aria-label="Add 1 to ${x}">+1</button><b>${strandLv(x)}</b></div>`}).join('')}</div>`:'<span class="hint">Choose your four Strands first.</span>'}</div>
   <div class="field"><div class="lab"><b>Three more levels</b><span class="chips" style="align-items:center"><span class="hint">in any Strand that is not Thin</span>${cLeft(3-sum(w.sx),3)}</span></div><div class="spg">${STRANDS.filter(x=>!w.thin.includes(x)).map(x=>{const n=w.sx[x]||0;return`<div class="sp"><span>${x}</span><span class="hint">${lifeLv(x)+(w.sl[x]||0)}</span>${stp('sx',x,n,1,x)}<span class="add">${n?'+'+n:''}</span><button class="btn mini" data-act="sx" data-val="${x}|1" ${3-sum(w.sx)<=0||strandLv(x)>=5?'disabled':''} aria-label="Add 1 more to ${x}">+1</button><b>${strandLv(x)}</b></div>`}).join('')}</div></div>
   <div class="field"><div class="lab"><span><b>Expertise in one Bind</b> <span class="hint">one level</span></span></div><div class="chips">${BINDS.map(b=>chip(b,w.ex===b,'swex',b)).join('')}</div></div>
@@ -676,7 +683,7 @@ function roTongues(L,W,O){O=O||[];S.ro.neww.forEach(x=>{if(x.mode==='wise'&&x.na
  Object.entries(S.ro.pts).forEach(([k,n])=>{if(k[0]!=='@'||!n)return;const e=L.find(l=>l[0]===k.slice(1))||W.find(w=>w[0]===k.slice(1));if(!e)return;const over=e[1]+n-70;if(over>0)O.push([10,e[0]+' is '+over+' over the cap of 70. Take points back or they are lost.']);e[1]=Math.min(70,e[1]+n)})}
 const savvyMax=()=>3+(S.folk==='Human'?1:0);
 const roSkillKeys=()=>[...Object.values(CAT).flat(),...(S.career==='Spellweaver'?BINDS.map(b=>'Bind: '+b):[])];
-function roRow(k,label,step){const n=S.ro.pts[k]||0;const isT=k[0]==='@';const tot=isT?tongueVal(k.slice(1)):Math.max(0,Math.min(70,total(k)));const room=isT?70-tot:70-total(k);return`<div class="sp"><span>${label}</span><span class="hint">${tot-n}</span><button class="btn mini" data-act="rop" data-val="${esc(k)}|-5" ${n<=0?'disabled':''} aria-label="Take 5 from ${esc(label)}">−5</button><span class="add">${n?'+'+n:''}</span><button class="btn mini" data-act="rop" data-val="${esc(k)}|5" ${room<5||!roOk(roCat(k),5)?'disabled':''} aria-label="Add 5 to ${esc(label)}">+5</button><b>${tot}</b></div>`}
+function roRow(k,label,step){const n=S.ro.pts[k]||0;const isT=k[0]==='@';const tot=isT?tongueVal(k.slice(1)):Math.max(0,Math.min(70,total(k)));const room=isT?70-tot:70-total(k);return`<div class="sp"><span>${lvDot(tot)}${label}</span><span class="hint">${tot-n}</span><button class="btn mini" data-act="rop" data-val="${esc(k)}|-5" ${n<=0?'disabled':''} aria-label="Take 5 from ${esc(label)}">−5</button><span class="add">${n?'+'+n:''}</span><button class="btn mini" data-act="rop" data-val="${esc(k)}|5" ${room<5||!roOk(roCat(k),5)?'disabled':''} aria-label="Add 5 to ${esc(label)}">+5</button><b>${tot}</b></div>`}
 function roPanel(){const r=S.ro;const P=roPools();const t=tongues();const known=[...t.L,...t.W];const hum=S.folk==='Human';
  const ageTxt={Young:'+20 Endurance, +1 Death Threshold, and 70 points for any skills.',Adult:'100 points for any skills.',Old:'One more level of Expertise, −20 Endurance, −2 Death Threshold, 30 points for Lore skills, and 100 points for any skills.'};
  return`<header><h2>Rounding out</h2><p>Everything you have picked up since your career, up to the day play begins. This is the last step that changes your skills.</p></header>
@@ -685,6 +692,7 @@ function roPanel(){const r=S.ro;const P=roPools();const t=tongues();const known=
   ${r.bonus==='talent'?`<div class="field">${talentSelect('robtal','data-ro="btal"',r.btal,'Bonus Talent')}${subUI('rb',r.btal)}</div>`:''}</div>
  <div class="sub"><div class="lab"><span><b>Points to spend</b> <span class="hint">on skills, -wises and languages, to 70 at most</span></span>${rollBtn('roRest','Spend the rest at random')}</div>
   <div class="ptbar" role="status" aria-live="polite">${[[P.free,P.freeT,'for any skill'],...(P.loreT?[[P.lore,30,'Lore only']]:[]),...(P.expT?[[P.exp,30,'Adventuring, Social or Lore']]:[])].map(([n,t,l])=>`<span class="pt"><span class="cnt big ${n<0?'bad':n===0?'ok':'warn'}">${n<0?(-n)+' over':n+' left'} of ${t}</span><small>${l}</small></span>`).join('')}${P.loreT||P.expT?'<small class="ptnote">Restricted points are used first when a skill qualifies.</small>':''}</div>
+  ${LVKEY}
   <div class="field"><div class="lab"><span><b>-wises and languages</b> <span class="hint">these count as Lore. A new one costs 20 and starts at 20.</span></span><button class="btn" data-act="ronew" ${roOk('Lore',20)?'':'disabled'}>Buy a new one for 20</button></div>
    ${known.length?`<div class="spg">${known.map(x=>roRow('@'+x[0],x[0])).join('')}</div>`:''}
    ${r.neww.map((x,i)=>`<div class="chips"><select id="ronew${i}" data-ronew="${i}" aria-label="New -wise or language ${i+1}"><option value="">Choose…</option><option value="wise" ${x.mode==='wise'?'selected':''}>A new -wise (name it)</option>${langChoices().filter(l=>!t.L.some(k=>k[0]===l)||x.mode==='lang:'+l).map(l=>`<option value="lang:${l}" ${x.mode==='lang:'+l?'selected':''}>New language: ${l}</option>`).join('')}</select>${x.mode==='wise'?`<input class="text" style="width:auto;flex:1" id="ronewn${i}" data-ronewname="${i}" value="${esc(x.name)}" placeholder="Name it" aria-label="Name of the -wise">`:''}<button class="btn" data-act="rodel" data-val="${i}">Remove</button></div>`).join('')}</div>
@@ -1280,6 +1288,10 @@ function rollAll0(){const st=S.step;S=blank();S.step=st;const folks=['Human'];S.
  else if(rnd(100)<=50){const nl=langOf(S.nation,S.cls,S.folk);const o=LANGS.filter(l=>l!==nl&&l!=='Sindarin');S.lang2=otherL()||o[rnd(o.length)-1]}
  if(S.bg==='wanderer')S.lang40='Jarin';S.age=['Young','Adult','Adult','Old'][rnd(4)-1];R.years();R.birth();R.sibs();R.parent();R.standing();R.travel();R.allies();R.abil();R.abilRest();LIFET.forEach(([t])=>{R.life(t);const o=optionsFor(lifeEv(t));S.life[t].pick=o[rnd(o.length)-1]});R.careerAll();R.roAll();R.atAll();R.gearAll();rollLook('');{const k=Object.keys(TRAITS).concat(signWords());const n=1+rnd(2);while(S.traits.length<n){const t=k[rnd(k.length)-1];if(!S.traits.includes(t))S.traits.push(t)}}}
 /* ---------- render ---------- */
+/* Skill level from the rulebook's Skill Competency table, shown as a coloured dot before a skill's name. Skills here stop at 70, so Expert and Master never show. */
+const LV=[[60,'r','Reliable','60–79'],[40,'p','Proficient','40–59'],[20,'n','Novice','20–39'],[0,'g','Green','1–19']];
+const lvDot=v=>{const[,c,n,r]=LV.find(l=>v>=l[0]);return`<span class="lv lv-${c}" role="img" aria-label="${n}" title="${n} (${r})"></span>`};
+const LVKEY=`<p class="lvkey hint">${LV.slice(0,3).reverse().map(([,c,n,r])=>`<span><span class="lv lv-${c}"></span>${n} ${r}</span>`).join('')}</p>`;
 const cLeft=(n,t,word='left')=>`<span class="cnt ${n<0?'bad':n===0?'ok':'warn'}">${n<0?(-n)+' over':n+' of '+t+' '+word}</span>`;
 const cChosen=(n,t)=>`<span class="cnt ${n===t?'ok':n>t?'bad':'warn'}">${n} of ${t} chosen</span>`;
 const chip=(label,on,act,val,extra='',dis=false)=>`<button class="chip" aria-pressed="${on}" data-act="${act}" data-val="${val}" ${dis?'disabled':''}>${label}${extra?`<small>${extra}</small>`:''}</button>`;
@@ -1383,7 +1395,7 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
    ${S.career==='Godbound'?`<div class="result">${S.deity?`<b>${esc(S.deity)}-wise 30</b> comes with the career.`:'Choose your god on the Sketch tab to gain its -wise at 30.'}</div>`:''}
    ${S.cw.slice(0,c.cw[0]).map((x,i)=>`<div class="chips"><select id="cw${i}" data-cw="${i}" aria-label="Lore of the trade ${i+1}" ${cwBad(x)?'aria-invalid="true" style="outline:2px solid var(--bad);outline-offset:1px"':''}><option value="">Choose…</option><option value="wise" ${x.mode==='wise'?'selected':''}>A new -wise (name it)</option>${langChoices().filter(l=>!known.includes(l)||x.mode==='lang:'+l).map(l=>`<option value="lang:${l}" ${x.mode==='lang:'+l?'selected':''}>New language: ${l}</option>`).join('')}${known.map(n=>{const bv=(base.L.find(l=>l[0]===n)||base.W.find(w=>w[0]===n)||[])[1]||0;const room=70-bv;return`<option value="add:${esc(n)}" ${x.mode==='add:'+n?'selected':''} ${room<=0&&x.mode!=='add:'+n?'disabled':''}>Add ${c.cw[1]} to ${esc(n)}${room<=0?' (already 70)':room<c.cw[1]?' (only +'+room+' counts)':''}</option>`}).join('')}</select>${x.mode==='wise'?`<input class="text" style="width:auto;flex:1" id="cwn${i}" data-cwname="${i}" value="${esc(x.name)}" placeholder="Name it, such as Longbow or Tashal" aria-label="Name of the -wise">`:''}</div>`).join('')}</div>
   <div class="sub"><div class="lab"><span><b>Skill points</b> <span class="hint">one point raises a skill by one, to 70 at most. Points stay in their category.</span></span>${rollBtn('cpRest','Spend the rest at random')}</div>
-   ${CATS.map(k=>`<div class="field"><div class="lab"><b>${k}</b>${cLeft(poolLeft(k),c.pool[CATS.indexOf(k)])}</div><div class="spg">${CAT[k].map(x=>{const b=baseVal(x),n=S.cp[x]||0;return`<div class="sp"><span>${x}</span><span class="hint">${b}</span><button class="btn mini" data-act="cp" data-val="${x}|-5" ${n<=0?'disabled':''} aria-label="Take 5 from ${x}">−5</button><span class="add">${n?'+'+n:''}</span><button class="btn mini" data-act="cp" data-val="${x}|5" ${poolLeft(k)<=0||b+n>=70?'disabled':''} aria-label="Add 5 to ${x}">+5</button><b>${Math.min(70,b+n)}</b></div>`}).join('')}</div></div>`).join('')}</div>
+   ${LVKEY}${CATS.map(k=>`<div class="field"><div class="lab"><b>${k}</b>${cLeft(poolLeft(k),c.pool[CATS.indexOf(k)])}</div><div class="spg">${CAT[k].map(x=>{const b=baseVal(x),n=S.cp[x]||0;return`<div class="sp"><span>${lvDot(Math.min(70,b+n))}${x}</span><span class="hint">${b}</span><button class="btn mini" data-act="cp" data-val="${x}|-5" ${n<=0?'disabled':''} aria-label="Take 5 from ${x}">−5</button><span class="add">${n?'+'+n:''}</span><button class="btn mini" data-act="cp" data-val="${x}|5" ${poolLeft(k)<=0||b+n>=70?'disabled':''} aria-label="Add 5 to ${x}">+5</button><b>${Math.min(70,b+n)}</b></div>`}).join('')}</div></div>`).join('')}</div>
   ${c.magic?magicPanel():''}
   <div class="sub"><div class="lab"><b>Talents</b></div>
    ${c.fixed.length?`<div class="result">${c.fixed.map(t=>`<b>${t}.</b> ${TAL[t]}`).join('<br>')}</div>`:''}
@@ -1414,7 +1426,7 @@ function sheet(){const c=culture();const o=occ();const t=tongues();const {led,ex
  const atr=`<div class="sec"><h3>Attributes ${atLeft()?`<span class="cnt ${atLeft()<0?'bad':'warn'}">${atLeft()<0?(-atLeft())+' over':atLeft()+' points to spend'}</span>`:''}</h3><div class="rows stripe">${[A.res,A.init,A.tough,A.dt,A.ll,A.inv].map(x=>`<div class="row" title="${atBreak(x)}"><span>${x.name}${x.parts.length>1?` <small>${atBreak(x)}</small>`:''}</span><span>${x.name==='Initiative'?'+':''}${x.val}</span></div>`).join('')}</div></div>`;
  const apt=`<div class="sec"><h3>Aptitudes and talents</h3><div class="ents">${S.abil.length?S.abil.map(a=>`<div class="ent"><b>${a.name}</b>${a.desc?` <small>${esc(a.desc)}</small>`:''}</div>`).join('')+Object.entries(talentSlots().reduce((m,[id,t])=>{const k=t+(subOf(id,t)?': '+subOf(id,t):'');m[k]=[t,(m[k]?m[k][1]:0)+1];return m},{})).map(([k,[t,n]])=>`<div class="ent"><b>${esc(k)}${n>1?' ×'+n:''}</b> <small>${TAL[t]||''}</small></div>`).join(''):e}</div></div>`;
  const left=slotsLeft();
- const sk=`<div class="sec"><h3>Skills ${S.bg&&left?`<span class="cnt warn">${left} choices left</span>`:`<small>${S.bg?'upbringing applied':'base values'}</small>`}</h3><div class="skills">${Object.entries(CAT).map(([g,list])=>`<div class="grp"><h4>${g}</h4>${list.map(s=>{const parts=led[s];const sum=parts.reduce((a,p)=>a+p[0],0);const v=Math.max(0,Math.min(70,sum));return`<div class="sk ${sum>20||ex[s]?'up':''} ${sum>70?'over':''}" title="${parts.map(p=>p[0]+' '+p[1]).join(' + ')}${sum>70?' — '+(sum-70)+' lost to the cap of 70':''}"><span>${s}${S.ro.savvy.includes(s)?'<span class="ex" title="Savvy">S</span>':''}${ex[s]?`<span class="ex">Ex${Math.min(4,ex[s]+1)}</span>`:''}${parts.length>1?`<span class="src">${parts.map(p=>p[0]).join(' + ').replace(/\+ -/g,'− ')}</span>`:''}</span><b>${v}</b></div>`}).join('')}</div>`).join('')}</div></div>`;
+ const sk=`<div class="sec"><h3>Skills ${S.bg&&left?`<span class="cnt warn">${left} choices left</span>`:`<small>${S.bg?'upbringing applied':'base values'}</small>`}</h3><div class="skills">${Object.entries(CAT).map(([g,list])=>`<div class="grp"><h4>${g}</h4>${list.map(s=>{const parts=led[s];const sum=parts.reduce((a,p)=>a+p[0],0);const v=Math.max(0,Math.min(70,sum));return`<div class="sk ${sum>20||ex[s]?'up':''} ${sum>70?'over':''}" title="${parts.map(p=>p[0]+' '+p[1]).join(' + ')}${sum>70?' — '+(sum-70)+' lost to the cap of 70':''}"><span>${lvDot(v)}${s}${S.ro.savvy.includes(s)?'<span class="ex" title="Savvy">S</span>':''}${ex[s]?`<span class="ex">Ex${Math.min(4,ex[s]+1)}</span>`:''}${parts.length>1?`<span class="src">${parts.map(p=>p[0]).join(' + ').replace(/\+ -/g,'− ')}</span>`:''}</span><b>${v}</b></div>`}).join('')}</div>`).join('')}</div></div>`;
  const kin=`<div class="sec"><h3>Kin and travel</h3><dl>${ageSettled()?`<dt>Age</dt><dd>${S.age}, ${ageYears()}</dd>`:''}<dt>Born on</dt><dd>${S.birth?S.birth.d+' '+monthName(S.birth.m)+(ageSettled()?' '+yearTxt(birthYear()):'')+', '+sunsign(S.birth):e}</dd><dt>Family</dt><dd>${[S.sibs?(S.sibs.n===1?'Only child':ord(S.sibs.rank)+' of '+S.sibs.n):'',S.parent,S.standing?S.standing+' in the clan':''].filter(Boolean).join(' · ')||e}</dd><dt>Travelled</dt><dd>${S.travel?travelOut().label:e}</dd><dt>People</dt><dd>${S.allies?(esc(allyList().join(' · '))||'None'):e}</dd></dl></div>`;
  const mk=Object.keys(led).filter(k=>/^(Bind|Strand|Piety)/.test(k));
  const thinK=cdef()&&cdef().magic?S.sw.thin.map(x=>'Strand: '+x):[];const mkAll=[...new Set([...mk,...thinK])];
