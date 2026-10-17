@@ -1211,6 +1211,8 @@ function travelMod(){let m=0;const parts=[];const add=(v,l)=>{if(v){m+=v;parts.p
  const o=S.occ;add(/Seaman|Pilot/.test(o)?5:/Hunter|Mercantyler|Mercenary|Teamster/.test(o)?2:0,'family trade');return{m,parts}}
 
 /* ---------- rolls ---------- */
+/* Rolled talents leave out ones the character already has (Combat Awareness may be taken more than once). If nothing is left, the full list is used. */
+const noDup=l=>{const have=talentCounts();const o=l.filter(t=>t==='Combat Awareness'||!have[t]);return o.length?o:l};
 const R={
  nation(){const pool=NATIONS.filter(n=>n.w>0);S.nation=pickW(pool).id;R.place();if(S.nation==='orbaal')R.people()},
  place(){const n=NAT[S.nation];S.place=pickW(n.places).name;S.inSet=rnd(100)<=10},
@@ -1227,7 +1229,7 @@ const R={
  b30(){Object.entries(CAT).forEach(([c,l])=>S.b30[c]=l[rnd(l.length)-1])},
  sex(){S.sex=rnd(100)<={Human:48,Sindarin:45,Khuzdul:75}[S.folk]?'Male':'Female'},
  abil(){const k=Object.keys(ABIL);const a=rnd(6);let b=rnd(6);while(b===a)b=rnd(6);S.abil=[a,b].map(i=>({name:k[i-1],ex:'',talent:'',desc:''}))},
- abilRest(){S.abil.forEach(a=>{const v=ABIL[a.name];const pk=l=>l[rnd(l.length)-1];if(!a.ex)a.ex=pk(v.skills);if(!a.talent)a.talent=pk(v.talents);if(!a.desc)a.desc=pk(v.desc)})},
+ abilRest(){S.abil.forEach(a=>{const v=ABIL[a.name];const pk=l=>l[rnd(l.length)-1];if(!a.ex)a.ex=pk(v.skills);if(!a.talent)a.talent=pk(noDup(v.talents));if(!a.desc)a.desc=pk(v.desc)})},
  birth(){S.birth={m:rnd(12),d:rnd(30)}},
  swRest(){const w=S.sw;const pk=l=>l[rnd(l.length)-1];if(w.binds.length<2||w.strands.length<4||w.thin.length<2){const k=Object.keys(SWT);const t=SWT[HOUSE[S.occ2]&&HOUSE[S.occ2][1]||pk(k)];if(w.binds.length<2)w.binds=t[0].slice();if(w.strands.length<4){w.strands=t[1].slice();w.thin=w.thin.filter(x=>!w.strands.includes(x))}while(w.thin.length<2){const o=STRANDS.filter(x=>!w.strands.includes(x)&&!w.thin.includes(x));w.thin.push((t[2].find(x=>o.includes(x)))||pk(o))}}swClean();
   let g=500;while(sum(w.bp)<100&&g--){const o=BINDS.filter(b=>baseVal('Bind: '+b)+(w.bp[b]||0)<70);if(!o.length)break;const b=pk(w.binds.filter(x=>o.includes(x)).concat(o));w.bp[b]=(w.bp[b]||0)+5}
@@ -1235,14 +1237,14 @@ const R={
   g=200;while(sum(w.sx)<3&&g--){const o=STRANDS.filter(x=>!w.thin.includes(x)&&strandLv(x)<5);if(!o.length)break;const x=pk(o);w.sx[x]=(w.sx[x]||0)+1}
   if(!w.ex)w.ex=pk(w.binds);if(!w.thread)w.thread='Strand: '+pk(w.strands)},
  roRest(){const r=S.ro;const keys=[...Object.values(CAT).flat(),...(S.career==='Spellweaver'?BINDS.map(b=>'Bind: '+b):[]),...(S.career==='Godbound'?['Piety']:[])];let g=800;while(g--){const o=keys.filter(k=>70-total(k)>=5&&roOk(roCat(k),5));if(!o.length)break;const k=o[rnd(o.length)-1];r.pts[k]=(r.pts[k]||0)+5}},
- roAll(){S.ro=newRo();const r=S.ro;const pk=l=>l[rnd(l.length)-1];r.bonus=pk(['talent','status','coin']);const tl=Object.values(talentGroups()).flat();if(r.bonus==='talent')r.btal=pk(tl);R.roRest();const sk=roSkillKeys().slice();while(r.savvy.length<savvyMax())r.savvy.push(sk.splice(rnd(sk.length)-1,1)[0]);if(S.age==='Old')r.oldEx=pk(roSkillKeys());if(S.folk==='Human'){r.humEx=pk(roSkillKeys());r.humTal=pk(tl)}},
+ roAll(){S.ro=newRo();const r=S.ro;const pk=l=>l[rnd(l.length)-1];r.bonus=pk(['talent','status','coin']);const tl=Object.values(talentGroups()).flat();if(r.bonus==='talent')r.btal=pk(noDup(tl));R.roRest();const sk=roSkillKeys().slice();while(r.savvy.length<savvyMax())r.savvy.push(sk.splice(rnd(sk.length)-1,1)[0]);if(S.age==='Old')r.oldEx=pk(roSkillKeys());if(S.folk==='Human'){r.humEx=pk(roSkillKeys());r.humTal=pk(noDup(tl))}},
  gcoin(){S.gear.coin=dice(2,4)*50},
  gfree(){S.gear.freeN=rnd(3)+1},
  gearAll(){S.gear=newGear();const g=S.gear;R.gcoin();R.gfree();const lv=trainLv();const best=ARM.filter(a=>a[4]<=lv).pop()[0];['Body','Head','LLeg','RLeg'].slice(0,g.freeN).forEach(k=>g.armor[k]=best);const sk=['Melee: Light','Melee: Medium','Melee: Heavy','Missile'].sort((a,b)=>skillVal(b)-skillVal(a))[0];const can=WEAP.filter(w=>w[1]===sk&&w[2]<=gearCalc().left&&w[0]!=='Dagger'&&w[0]!=='Lance');if(can.length){const w=can[rnd(can.length)-1];g.items.push({n:w[0],hand:true})}if(sk!=='Missile'&&sk!=='Melee: Heavy'&&gearCalc().left>=75)g.items.push({n:'Medium Shield',hand:true})},
  atAll(){S.at=newAt();const a=S.at;let g=50;while(atLeft()>0&&g--){const k=['res','init','tough','dt'][rnd(4)-1];if(k==='tough'){if(atLeft()>=2)a.tough+=2}else a[k]++}},
  ccoin(){const c=cdef();S.ccoin=dice(c.coin[0],c.coin[1])*c.coin[2]},
  cpRest(){CATS.forEach(k=>{let guard=500;while(poolLeft(k)>0&&guard--){const open=CAT[k].filter(x=>baseVal(x)+(S.cp[x]||0)<70);if(!open.length)break;const x=open[rnd(open.length)-1];S.cp[x]=(S.cp[x]||0)+Math.min(5,poolLeft(k),70-baseVal(x)-(S.cp[x]||0))}})},
- careerAll(){const c=cdef();if(!c)return;if(c.magic)rollSwPath();else S.occ2=c.occ[rnd(c.occ.length)-1];S.cw=[];for(let i=0;i<c.cw[0];i++)S.cw.push(i===1?{mode:'lang:'+(LANGS.find(l=>!tongues(true).L.some(x=>x[0]===l))||'Jarin'),name:''}:{mode:'wise',name:i?(S.place||'Home')+' district':S.occ2});S.cp={};R.cpRest();S.ctal=[];c.picks.forEach((_,i)=>{const o=talentOpts(i);S.ctal[i]=o[rnd(o.length)-1]});S.cswap='';R.ccoin();S.sw=newSw();if(c.magic)R.swRest()},
+ careerAll(){const c=cdef();if(!c)return;if(c.magic)rollSwPath();else S.occ2=c.occ[rnd(c.occ.length)-1];S.cw=[];for(let i=0;i<c.cw[0];i++)S.cw.push(i===1?{mode:'lang:'+(LANGS.find(l=>!tongues(true).L.some(x=>x[0]===l))||'Jarin'),name:''}:{mode:'wise',name:i?(S.place||'Home')+' district':S.occ2});S.cp={};R.cpRest();S.ctal=[];c.picks.forEach((_,i)=>{const o=noDup(talentOpts(i));S.ctal[i]=o[rnd(o.length)-1]});S.cswap='';R.ccoin();S.sw=newSw();if(c.magic)R.swRest()},
  life(t){const pool=LIFE[t].filter(e=>!(t==='origin'&&S.lifeFilter&&unfit(e))).map(e=>({name:e.lo,w:e.hi-e.lo+1}));const lo=pickW(pool).name;S.life[t]={lo,pick:'',rel:''};const o=optionsFor(lifeEv(t));if(o.length===1)S.life[t].pick=o[0];if(t==='origin')afterOrigin()},
 
  sibs(){const c=culture();const n=c==='Khuzan'?dice(3,3)-2:c==='Sindarin'?dice(3,2)-2:(c==='Tribal'&&S.bg!=='wanderer')?dice(8,2)-7:dice(6,2)-5;S.sibs={n,rank:rnd(n)}},
