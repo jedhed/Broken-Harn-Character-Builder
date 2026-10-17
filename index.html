@@ -198,7 +198,7 @@ h4.subh{border-bottom:1px solid var(--hair);padding-bottom:2px;margin:4px 0 5px}
 .agerow output{font:700 26px/1 var(--head);min-width:2ch;text-align:right;font-variant-numeric:tabular-nums}
 .camp{display:flex;gap:6px;align-items:center}.camp input{width:6.5ch}.camp #camp-y{width:10ch}
 [hidden]{display:none!important}
-.instr{max-width:68ch}
+.instr{max-width:max(68ch,66.667%);display:flex;flex-direction:column;gap:8px}
 .begin{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 .bcard{background:var(--card);border:1px solid var(--hair);padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-width:0}
 .scroll{overflow-x:auto}
@@ -207,6 +207,10 @@ th{font:600 16.5px var(--head);text-align:left;padding:4px 10px;border-bottom:2p
 td{padding:6px 10px;font-size:14.5px;vertical-align:middle}
 tbody tr:nth-child(odd){background:var(--panel)}
 td.act{white-space:nowrap;text-align:right}td.act>*{margin-left:16px;vertical-align:middle}td.act>*:first-child{margin-left:0}
+td.act>.ibtn{margin-left:6px}
+.ibtn{display:inline-flex;align-items:center;gap:3px;padding:4px 6px;border:1px solid var(--hair);border-radius:3px;background:transparent;color:var(--ink);cursor:pointer;font:600 11px/1 var(--body);letter-spacing:.02em}
+.ibtn svg{width:18px;height:18px;flex:none}.ibtn:hover:not(:disabled){background:var(--panel2);border-color:var(--muted)}
+.ibtn.del{color:var(--bad-t)}.ibtn:disabled{color:var(--lock);cursor:not-allowed}
 .dlrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px}.dlrow .btn{font-size:15.5px;padding:4px 12px}
 td b{font:700 17.5px var(--head)}
 .err{color:var(--bad-t);font-weight:700;font-size:14px}
@@ -282,7 +286,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-6';
+const APPVER='2026.10.17-7';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1466,14 +1470,20 @@ const copyLabel=c=>c.copy?(c.copy.n>1?' (copy '+c.copy.n+')':' (copy)'):'';
 function dupChar(id){dupMsg=null;if(VIEW==='char'&&id===CUR)saveNow();const e=CHARS.find(c=>c.id===id);if(!e)return null;const c=JSON.parse(JSON.stringify(e));c.id=newId();c.saved=Date.now();c.copy={name:e.name,n:CHARS.filter(x=>x.copy&&x.copy.name===e.name).length+1};CHARS.unshift(c);store();
  if(saveFull){CHARS=CHARS.filter(x=>x!==c);store();dupMsg='Not copied: this browser\'s storage is full. Remove a portrait, or download and delete old characters.';return null}return c.id}
 function savedTxt(ts){const d0=x=>{const d=new Date(x);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()};const n=Math.round((d0(Date.now())-d0(ts))/864e5);return n<=0?'Today':n===1?'Yesterday':n<7?n+' days ago':new Date(ts).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
+/* Icons for the character list's row actions: Tabler Icons (MIT licence, tabler.io/icons), drawn inline so nothing loads from the internet. */
+const ICON=(d)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IC={dl:ICON('<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/>'),
+ copy:ICON('<path d="M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z"/><path d="M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1"/>'),
+ del:ICON('<path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>')};
 function startScreen(){const rows=CHARS.slice().sort((a,b)=>b.saved-a.saved).map(c=>{const m=c.sum||{career:'',born:'',done:0};const nm=c.name?esc(c.name):'Unnamed';const no='<span class="empty">Not chosen</span>';
-  return`<tr><td><b>${nm}</b>${c.copy?`<span class="empty">${copyLabel(c)}</span>`:''}</td><td>${m.career||no}</td><td>${m.born||no}</td><td><span class="cnt ${m.done===ORDER.length?'ok':'warn'}">${m.done} of ${ORDER.length} steps</span></td><td>${savedTxt(c.saved)}</td><td class="act">${pendingDel===c.id?`<span class="err">Delete ${nm}?</span><button class="btn" data-act="delyes" data-val="${c.id}">Delete</button><button class="link" data-act="delno">Cancel</button>`:`<button class="btn" data-act="open" data-val="${c.id}">Open</button><button class="link" data-act="dl" data-val="${c.id}" aria-label="Download ${nm} as .md">Download .md</button>${pdfOk(c.id)?`<button class="link" data-act="pdf" data-val="${c.id}" aria-label="Download ${nm} as PDF" ${pdfBusy?'disabled':''}>Download PDF</button>`:`<button class="link" disabled title="${pdfWhy(c.id)}" aria-label="Download ${nm} as PDF. ${pdfWhy(c.id)}">Download PDF</button>`}<button class="link" data-act="dup" data-val="${c.id}" aria-label="Duplicate ${nm}">Duplicate</button><button class="link" data-act="del" data-val="${c.id}" aria-label="Delete ${nm}">Delete</button>`}</td></tr>`}).join('');
+  return`<tr><td><b>${nm}</b>${c.copy?`<span class="empty">${copyLabel(c)}</span>`:''}</td><td>${m.career||no}</td><td>${m.born||no}</td><td><span class="cnt ${m.done===ORDER.length?'ok':'warn'}">${m.done} of ${ORDER.length} steps</span></td><td>${savedTxt(c.saved)}</td><td class="act">${pendingDel===c.id?`<span class="err">Delete ${nm}?</span><button class="btn" data-act="delyes" data-val="${c.id}">Delete</button><button class="link" data-act="delno">Cancel</button>`:`<button class="btn" data-act="open" data-val="${c.id}">Open</button><button class="ibtn" data-act="dl" data-val="${c.id}" title="Download .md (save file)" aria-label="Download ${nm} as .md, the save file">${IC.dl}MD</button>${pdfOk(c.id)?`<button class="ibtn" data-act="pdf" data-val="${c.id}" title="Download PDF (character sheet)" aria-label="Download ${nm} as PDF, the character sheet" ${pdfBusy?'disabled':''}>${IC.dl}PDF</button>`:`<button class="ibtn" disabled title="${pdfWhy(c.id)}" aria-label="Download ${nm} as PDF. ${pdfWhy(c.id)}">${IC.dl}PDF</button>`}<button class="ibtn" data-act="dup" data-val="${c.id}" title="Duplicate" aria-label="Duplicate ${nm}">${IC.copy}</button><button class="ibtn del" data-act="del" data-val="${c.id}" title="Delete" aria-label="Delete ${nm}">${IC.del}</button>`}</td></tr>`}).join('');
  const fin=finMsg&&CHARS.some(c=>c.id===finMsg.id)?`<div class="notice fin" role="status"><span>${finMsg.todo.length?`<b>${esc(finMsg.name)}</b> is saved, with ${finMsg.todo.length} ${finMsg.todo.length===1?'step':'steps'} unfinished: ${finMsg.todo.join(', ')}.`:`<b>${esc(finMsg.name)}</b> is finished and saved in this browser. Download the file to keep a copy or to send to your GM.`}</span><span class="chips">${finMsg.todo.length?`<button class="btn" data-act="open" data-val="${finMsg.id}">Go back to it</button><button class="btn" data-act="dl" data-val="${finMsg.id}">Download .md anyway</button>${GM.pdfDraft?`<button class="btn" data-act="pdf" data-val="${finMsg.id}" ${pdfBusy?'disabled':''}>Download PDF anyway</button>`:''}`:`<button class="btn primary" data-act="dl" data-val="${finMsg.id}">Download .md</button><button class="btn" data-act="pdf" data-val="${finMsg.id}" ${pdfBusy?'disabled':''}>Download PDF</button>`}</span></div>`:'';
- $('#start').innerHTML=`${fin}<p class="instr">Make a character for the Broken Empires rules, set on Hârn. Work through origin, career and gear one step at a time, choosing or rolling at every point. Your work is saved in this browser, and you can download any character as a file.</p>
+ $('#start').innerHTML=`${fin}<div class="instr"><p>Build a character for The Broken Empires RPG, set in the world of Hârn. The builder takes you through four stages, one step at a time: the basics, family and origin, who your character is, and outfitting. At every step you can choose for yourself or roll the dice, and the builder keeps the rules and totals straight.</p>
+ <p>Characters save automatically in this browser, but browser storage can be cleared. To keep a character safe, download its <b>.md file</b>: that's its save file, and you can load it back here on any device with "Load a character file". The <b>PDF</b> is a filled-in character sheet for printing or sharing; it can't be loaded back.</p></div>
  <div class="field"><div class="lab"><b>Begin</b></div><div class="begin">
   <div class="bcard"><h3>New character</h3><span>Start with a sketch and make each choice yourself.</span><button class="btn primary" data-act="newchar">New character</button></div>
   <div class="bcard"><h3>Roll a whole origin</h3><span>Let the dice fill every step, then change what you like.</span><button class="btn roll" data-act="rollchar">Roll a whole origin</button></div>
-  <div class="bcard"><h3>Load a character file</h3><span>Open a .md file you downloaded earlier.</span><button class="btn" data-act="pickfile">Choose a file</button>${loadMsg?`<span class="${loadMsg[0]?'hint':'err'}" role="status">${esc(loadMsg[1])}</span>`:''}</div>
+  <div class="bcard"><h3>Load a character file</h3><span>Open a .md save file you downloaded earlier.</span><button class="btn" data-act="pickfile">Choose a file</button>${loadMsg?`<span class="${loadMsg[0]?'hint':'err'}" role="status">${esc(loadMsg[1])}</span>`:''}</div>
  </div></div>
  <div class="field"><div class="lab"><b>Your characters</b>${dupMsg?`<span class="err" role="status">${esc(dupMsg)}</span>`:''}</div>${CHARS.length?`<div class="scroll"><table><thead><tr><th>Name</th><th>Career</th><th>Born</th><th>Progress</th><th>Saved</th><th></th></tr></thead><tbody>${rows}</tbody></table></div><div id="listnote" class="hint" role="status">${esc(listNote)}</div>`:'<div class="result">No characters yet. Begin one above.</div>'}
  ${saveOK===false?'<div class="warnbox">This browser is blocking storage, so characters will not be kept after you close the page.</div>':''}</div>`}
