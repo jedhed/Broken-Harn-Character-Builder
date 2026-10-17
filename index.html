@@ -286,7 +286,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-8';
+const APPVER='2026.10.17-9';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1265,7 +1265,7 @@ const R={
  sex(){S.sex=rnd(100)<={Human:48,Sindarin:45,Khuzdul:75}[S.folk]?'Male':'Female'},
  abil(){const k=Object.keys(ABIL);const a=rnd(6);let b=rnd(6);while(b===a)b=rnd(6);S.abil=[a,b].map(i=>({name:k[i-1],ex:'',talent:'',desc:''}))},
  abilRest(){S.abil.forEach(a=>{const v=ABIL[a.name];const pk=l=>l[rnd(l.length)-1];if(!a.ex)a.ex=pk(v.skills);if(!a.talent)a.talent=pk(noDup(v.talents));if(!a.desc)a.desc=pk(v.desc)})},
- birth(){S.birth={m:rnd(12),d:rnd(30)}},
+ birth(){if(S.birthHand)return;S.birth={m:rnd(12),d:rnd(30)}},
  swRest(){const w=S.sw;const pk=l=>l[rnd(l.length)-1];if(w.binds.length<2||w.strands.length<4||w.thin.length<2){const k=Object.keys(SWT);const t=SWT[HOUSE[S.occ2]&&HOUSE[S.occ2][1]||pk(k)];if(w.binds.length<2)w.binds=t[0].slice();if(w.strands.length<4){w.strands=t[1].slice();w.thin=w.thin.filter(x=>!w.strands.includes(x))}while(w.thin.length<2){const o=STRANDS.filter(x=>!w.strands.includes(x)&&!w.thin.includes(x));w.thin.push((t[2].find(x=>o.includes(x)))||pk(o))}}swClean();
   let g=500;while(sum(w.bp)<100&&g--){const o=BINDS.filter(b=>baseVal('Bind: '+b)+(w.bp[b]||0)<70);if(!o.length)break;const b=pk(w.binds.filter(x=>o.includes(x)).concat(o));w.bp[b]=(w.bp[b]||0)+5}
   g=200;while(sum(w.sl)<10&&g--){const o=w.strands.filter(x=>strandLv(x)<5);if(!o.length)break;const x=pk(o);w.sl[x]=(w.sl[x]||0)+1}
@@ -1297,6 +1297,11 @@ function rollAll0(){const st=S.step;S=blank();S.step=st;const folks=['Human'];S.
  else if(rnd(100)<=50){const nl=langOf(S.nation,S.cls,S.folk);const o=LANGS.filter(l=>l!==nl&&l!=='Sindarin');S.lang2=otherL()||o[rnd(o.length)-1]}
  if(S.bg==='wanderer')S.lang40='Jarin';S.age=['Young','Adult','Adult','Old'][rnd(4)-1];R.years();R.birth();R.sibs();R.parent();R.standing();R.travel();R.allies();R.abil();R.abilRest();LIFET.forEach(([t])=>{R.life(t);const o=optionsFor(lifeEv(t));S.life[t].pick=o[rnd(o.length)-1]});R.careerAll();R.roAll();R.atAll();R.gearAll();rollLook('');{const k=Object.keys(TRAITS).concat(signWords());const n=1+rnd(2);while(S.traits.length<n){const t=k[rnd(k.length)-1];if(!S.traits.includes(t))S.traits.push(t)}}}
 /* ---------- render ---------- */
+/* Birth step: "Set the birthday myself" shows month and day pickers and locks the sign buttons, which follow the date. The hand-set date is kept in S.birthMine, so unticking and ticking again brings it back. */
+function birthPick(){const b=S.birthMine||{};
+ return`<label class="hint" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" data-bhand="1" ${S.birthHand?'checked':''}> Set the birthday myself</label>
+ ${S.birthHand?`<div class="chips"><select id="bmon" data-bmon="1" aria-label="Birth month"><option value="">Month…</option>${MONTHS.map((_,i)=>`<option value="${i+1}" ${b.m===i+1?'selected':''}>${i+1} · ${monthName(i+1)}</option>`).join('')}</select><select id="bday" data-bday="1" aria-label="Birth day"><option value="">Day…</option>${Array.from({length:30},(_,i)=>`<option value="${i+1}" ${b.d===i+1?'selected':''}>${i+1}</option>`).join('')}</select></div>`:''}`}
+const birthFromMine=()=>{const b=S.birthMine||{};S.birth=b.m&&b.d?{m:b.m,d:b.d}:null};
 /* Title: free text shown before the name (sidebar, list, .md, PDF; not file names), with suggestions that fit the character. */
 const titled=n=>{const t=(S.title||'').trim();return t&&n?t+' '+n:n};
 /* Knighted: nobles only. Ticked by default for a Warrior whose specialty is Knight; S.knighted holds the player's own choice. Knighted at 21, or this year if 20 or 21. */
@@ -1336,7 +1341,8 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
  if(S.step===1){const n=NAT[S.nation];const tribal=S.nation==='tribal';
   h=`<header><h2>Birth</h2><p>When and where you were born. Where decides the kind of society that raised you, and everything after this is narrowed by it.</p></header>${warn}
   ${(()=>{const pr=S.birth?signPair(S.birth):null;const sg=activeSign();const k=sg?SIGNSK[sg]:[];const af=signAff();
-   return`<div class="field"><div class="lab"><b>Birthdate and sunsign</b>${rollBtn('birth','Roll 1d12 and 1d30')}</div><div class="chips">${SIGNS.map(([n])=>chip(n,!!pr&&(pr.main===n||pr.other===n),'sign',n)).join('')}</div>
+   return`<div class="field"><div class="lab"><b>Birthdate and sunsign</b>${S.birthHand?'':rollBtn('birth','Roll 1d12 and 1d30')}</div><div class="chips">${SIGNS.map(([n])=>chip(n,!!pr&&(pr.main===n||pr.other===n),'sign',n,'',!!S.birthHand)).join('')}</div>
+   ${birthPick()}
    ${pr&&pr.other?`<div class="lab"><span><b>Born on a cusp</b> <span class="hint">choose which sign's gifts you take</span></span></div><div class="chips">${[pr.main,pr.other].map(n=>chip(n,sg===n,'cusp',n)).join('')}</div>`:''}
    <div class="result">${S.birth?`Born <b>${S.birth.d} ${monthName(S.birth.m)}</b> under <b>${sunsign(S.birth)}</b>. ${sg}, ${SIGNINFO[sg][0]}, gives <b>+10</b> ${k[0]} and <b>+5</b> ${k[1]} and ${k[2]}.<br>Those born under it tend to be ${SIGNINFO[sg][1]}; at worst ${SIGNINFO[sg][2]}.${af?`<br>As a Spellweaver, your <b>Affinity</b> is ${af[0].join(' and ')} (+1 Mastery when you cast with ${af[0].length>1?'either':'it'}) and your <b>Impedance</b> is ${af[1].join(' and ')} (+1 TC).`:''}`:'Roll a date, or pick a sign and a date under it is rolled for you.'}</div></div>`})()}
   <div class="field"><div class="lab"><b>Realm</b>${rollBtn('nation','Roll d100')}</div><div class="chips">${NATIONS.filter(x=>x.id!=='evael'||GM.Sindarin||S.nation==='evael').map(x=>chip(x.name,S.nation===x.id,'nation',x.id,x.w?x.w+'%':'')).join('')}</div></div>
@@ -1795,6 +1801,8 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.patro){S.patro=el.checked;render();return}
  if(el.dataset.given){S.given=el.value.trim();render();return}
  if(el.dataset.title!==undefined){S.title=el.value.trim();render();return}
+ if(el.dataset.bhand){S.birthHand=el.checked;if(el.checked){if(!S.birthMine)S.birthMine=S.birth?{m:S.birth.m,d:S.birth.d}:{m:0,d:0};birthFromMine()}render();return}
+ if(el.dataset.bmon||el.dataset.bday){if(!S.birthMine)S.birthMine={m:0,d:0};S.birthMine[el.dataset.bmon?'m':'d']=+el.value||0;birthFromMine();render();return}
  if(el.dataset.knight){S.knighted=el.checked;render();return}
  if(el.dataset.nhand){S.nameHand=el.checked;if(el.checked&&!S.handName)S.handName=everyday();render();return}
  if(el.dataset.handname){S.handName=el.value.trim();render();return}
