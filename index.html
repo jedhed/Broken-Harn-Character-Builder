@@ -1175,7 +1175,7 @@ function ledger(){const led={},ex={};const add=(s,a,src)=>{(led[s]=led[s]||[]).p
  {const sg=activeSign();if(sg)SIGNSK[sg].forEach((x,i)=>add(x,i?5:10,'sunsign'))}
  S.abil.forEach(a=>{ABIL[a.name].skills.forEach(x=>add(x,5,'aptitude'));if(a.ex)ex[a.ex]=(ex[a.ex]||0)+1});
  if(cdef()){Object.entries(S.cp).forEach(([x,n])=>{if(n)add(x,n,'career')});if(S.career==='Godbound'){add('Piety',20,'career');add('Piety',30,'Godbound talent')}if(cdef().magic){const w=S.sw;w.binds.forEach(b=>add('Bind: '+b,10,'chosen Bind'));Object.entries(w.bp).forEach(([b,n])=>{if(n)add('Bind: '+b,n,'career')});STRANDS.forEach(x=>{const n=(w.sl[x]||0)+(w.sx[x]||0);if(n)add('Strand: '+x,n,'career')});talentSlots().forEach(([id,t])=>{if(t==='Strand Secret'&&subOf(id,t))add('Strand: '+subOf(id,t),1,'Strand Secret')});if(w.ex)ex['Bind: '+w.ex]=(ex['Bind: '+w.ex]||0)+1}}
- {const r=S.ro;Object.entries(r.pts).forEach(([k,n])=>{if(n&&k[0]!=='@')add(k,n,'rounding out')});Object.entries(r.str).forEach(([x,n])=>{if(n)add('Strand: '+x,n,'rounding out')});if(S.age==='Young')add('Endurance',20,'age');if(S.age==='Old')add('Endurance',-20,'age');[r.oldEx,r.humEx].forEach(x=>{if(x)ex[x]=(ex[x]||0)+1})}
+ {const r=S.ro;Object.entries(r.pts).forEach(([k,n])=>{if(n&&k[0]!=='@')add(k,n,'rounding out')});Object.entries(r.str).forEach(([x,n])=>{if(n)add('Strand: '+x,n,'rounding out')});if(S.age==='Young')add('Endurance',20,'age');if(S.age==='Old')add('Endurance',-20,'age');[S.age==='Old'?r.oldEx:'',S.folk==='Human'?r.humEx:''].forEach(x=>{if(x)ex[x]=(ex[x]||0)+1})}
  return{led,ex}}
 function skillVal(x){return Math.max(0,Math.min(70,ledger().led[x].reduce((a,p)=>a+p[0],0)))}
 function slotsLeft(){const b=BG[S.bg];if(!b)return 0;return b.slots.reduce((a,sl)=>a+sl.n-(S.picks[sl.id]||[]).length,0)}
