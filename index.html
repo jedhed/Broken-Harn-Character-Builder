@@ -282,7 +282,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-5';
+const APPVER='2026.10.17-6';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1288,6 +1288,11 @@ function rollAll0(){const st=S.step;S=blank();S.step=st;const folks=['Human'];S.
  else if(rnd(100)<=50){const nl=langOf(S.nation,S.cls,S.folk);const o=LANGS.filter(l=>l!==nl&&l!=='Sindarin');S.lang2=otherL()||o[rnd(o.length)-1]}
  if(S.bg==='wanderer')S.lang40='Jarin';S.age=['Young','Adult','Adult','Old'][rnd(4)-1];R.years();R.birth();R.sibs();R.parent();R.standing();R.travel();R.allies();R.abil();R.abilRest();LIFET.forEach(([t])=>{R.life(t);const o=optionsFor(lifeEv(t));S.life[t].pick=o[rnd(o.length)-1]});R.careerAll();R.roAll();R.atAll();R.gearAll();rollLook('');{const k=Object.keys(TRAITS).concat(signWords());const n=1+rnd(2);while(S.traits.length<n){const t=k[rnd(k.length)-1];if(!S.traits.includes(t))S.traits.push(t)}}}
 /* ---------- render ---------- */
+/* The Upbringing step's "Background skills" line: the household the character grew up in, and where. The family's role goes in brackets, since trade names such as "Soldier: Mercenary/Viking" don't read well inside a sentence. */
+function bgLine(){const o=S.occ,base='The skills you learned growing up';if(!o||!S.cls||!S.place)return base+'.';
+ if(S.nation==='tribal')return`${base} among the ${S.place}, where your family were ${o}.`;
+ const h=ivClan()&&S.ivc?(S.ivc==='thrall'?'in bondage to a clan':S.chief?'among the chief\'s kin':{minor:'in a minor clan household',great:'in a greatclan household',ind:'in an independent household'}[S.ivc]):{noble:'in a noble household',guilded:'in a guild household',unguilded:'in a common household',serf:'in a serf household bound to the land',slave:'in bondage'}[S.cls];
+ return S.bg==='wanderer'?`${base} on the move, ${h} (${o}).`:`${base} ${h} (${o}), ${S.inSet?'in '+S.place:'in a village near '+S.place}.`}
 /* Skill level from the rulebook's Skill Competency table, shown as a coloured dot before a skill's name. Skills here stop at 70, so Expert and Master never show. */
 const LV=[[60,'r','Reliable','60%+'],[40,'p','Proficient','40–59%'],[20,'n','Novice','20–39%'],[0,'g','Green','1–19%']];
 const lvDot=v=>{const[,c,n,r]=LV.find(l=>v>=l[0]);return`<span class="lv lv-${c}" role="img" aria-label="${n}" title="${n} (${r})"></span>`};
@@ -1297,7 +1302,7 @@ const cChosen=(n,t)=>`<span class="cnt ${n===t?'ok':n>t?'bad':'warn'}">${n} of $
 const chip=(label,on,act,val,extra='',dis=false)=>`<button class="chip" aria-pressed="${on}" data-act="${act}" data-val="${val}" ${dis?'disabled':''}>${label}${extra?`<small>${extra}</small>`:''}</button>`;
 const rollBtn=(what,label='Roll')=>`<button class="btn roll" data-act="roll" data-val="${what}">${label}</button>`;
 function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class="warnbox">${m}</div>`).join('');let h='';const c=culture();
- if(S.step===0){h=`<header><h2>Starting skills</h2><p>Pick the skill your character leans on most in each area. It starts at 30. Every other skill starts at 20.</p></header>${warn}
+ if(S.step===0){h=`<header><h2>Starting skills</h2><p>Pick the skill your character leans on most in each area. It starts at 30. Every other skill starts at 20. These are your natural gifts: what you were good at before anyone taught you.</p></header>${warn}
   <div class="lab"><b>One skill at 30 in each category</b>${rollBtn('b30','Roll all four')}</div>
   ${Object.entries(CAT).map(([c,list])=>`<div class="field"><div class="lab"><b>${c}</b><span class="hint">${S.b30[c]?'30 in '+S.b30[c]:'not chosen'}</span></div><div class="chips">${list.map(x=>chip(x,S.b30[c]===x,'b30',c+'|'+x)).join('')}</div></div>`).join('')}
   <p class="hint">Every other skill starts at 20. Magic skills start at zero and come later.</p>`}
@@ -1330,7 +1335,8 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
  if(S.step===3){const sg=suggestBg();const b=BG[S.bg];
   h=`<header><h2>Upbringing</h2><p>The Background from the Broken Empires rules. Your birthplace and station suggest one, but the choice is yours.</p></header>${warn}
   <div class="cards">${Object.entries(BG).map(([k,v])=>`<button class="card" aria-pressed="${S.bg===k}" data-act="bg" data-val="${k}">${sg===k?'<span class="tag">Suggested by your origin</span>':''}<h3>${v.name}</h3><span>${v.blurb}</span></button>`).join('')}</div>
-  ${b?`<div class="result">Given to everyone with this upbringing: <b>+20</b> ${b.f20.join(', ')} · <b>+10</b> ${b.f10.join(', ')}${b.fex.length?` · <b>Expertise</b> ${b.fex.join(', ')}`:''}</div>
+  ${b?`<div class="lab"><b>Background skills</b></div><p class="hint">${esc(bgLine())}</p>
+  <div class="result">Given to everyone with this upbringing: <b>+20</b> ${b.f20.join(', ')} · <b>+10</b> ${b.f10.join(', ')}${b.fex.length?` · <b>Expertise</b> ${b.fex.join(', ')}`:''}</div>
   <div class="lab"><b>Your choices</b>${rollBtn('picks','Roll the rest')}</div>
   ${b.slots.map(sl=>{const p=S.picks[sl.id]||[];return`<div class="field"><div class="lab"><span><b>${sl.label}</b> <span class="hint">${sl.ex?'one level':'+'+sl.amt}</span></span>${cChosen(p.length,sl.n)}</div><div class="chips">${slotOpts(sl).map(s=>chip(s,p.includes(s),'pick',sl.id+'|'+s)).join('')}</div></div>`}).join('')}`:''}`}
  if(S.step===4){const t=tongues();const nl=S.nation?langOf(S.nation,S.cls,S.folk):'';
