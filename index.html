@@ -289,7 +289,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-15';
+const APPVER='2026.10.17-16';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1677,7 +1677,7 @@ async function addPage3(doc,L,F,safe,name){const T=await p3Fonts(doc,F);const W=
  /* A box in the sheet's style: rounded corners, the heading set into the top line. */
  const HZ=T.ok?14:12.5;const box=(p,x,top,w,h,title)=>{const r=8,tw=capsW(title,HZ);const path=`M ${r+tw+8} 0 L ${w-r} 0 Q ${w} 0 ${w} ${r} L ${w} ${h-r} Q ${w} ${h} ${w-r} ${h} L ${r} ${h} Q 0 ${h} 0 ${h-r} L 0 ${r} Q 0 0 ${r} 0`;
   p.drawSvgPath(path,{x,y:top,borderColor:edge,borderWidth:.8});caps(p,title,x+r+2,top-HZ*.34,HZ)};
- const newPage=()=>{const p=doc.addPage();p.setSize(W,H);p.drawPage(head,{x:0,y:719});const NF=T.ok?T.head:F.TiBo;if(name){const c=pdfNames(name);const nm=c.find(n=>nw(n,NF,10)<=175)||c[c.length-1];p.drawText(safe(nm,NF),{x:26,y:736,size:Math.min(16,16*175/Math.max(175,nw(nm,NF,16))),font:NF,color:red})}return p};
+ const newPage=()=>{const p=doc.addPage();p.setSize(W,H);p.drawPage(head,{x:0,y:719});const NF=T.ok?T.head:F.TiBo;if(name){const c=pdfNames(name).map(titled);const nm=c.find(n=>nw(n,NF,10)<=175)||c[c.length-1];p.drawText(safe(nm,NF),{x:26,y:736,size:Math.min(16,16*175/Math.max(175,nw(nm,NF,16))),font:NF,color:red})}return p};
  let p=newPage();
  /* Portrait, top right, a third of the page wide. */
  {const x=M+LW+G,iw=PW-14,ih=Math.round(iw*4/3),bh=ih+24;box(p,x,TOP,PW,bh,'Portrait');
@@ -1697,7 +1697,7 @@ async function addPage3(doc,L,F,safe,name){const T=await p3Fonts(doc,F);const W=
     else{if(T.ok)p.drawText(safe(r[0],T.label),{x:M+10,y:ry-LH+2,size:10,font:T.label,color:ink});else caps(p,r[0],M+10,ry-LH+2.5,7.2,F.TiRo);wrap(r[1],BF,VZ,vw).forEach((ln,k)=>p.drawText(ln,{x:M+10+LBL,y:ry-LH+2-k*LH,size:VZ,font:BF,color:red}))}});
    i+=seg.length;y=yy-6-16;first=false;if(i<s.rows.length){p=newPage();y=TOP}}}
  function R3(){return page3Data()}}
-/* On the PDF a long name is shortened rather than printed tiny: full name, then given name and patronymic, then the given name alone. A byname or a name written by hand is never shortened. */
+/* On the PDF a long name is shortened rather than printed tiny: full name, then given name and patronymic, then the given name alone. Callers put the title (if any) in front of each. A byname or a name written by hand is never shortened. */
 function pdfNames(full){if(S.nameHand||(byOn()&&S.byname))return[full];const g=givenName();if(!g||!full)return[full];const p=patronymic();const c=[full];if(p&&full!==g+' '+p)c.push(g+' '+p);if(full!==g)c.push(g);return c}
 async function makePdf(name){const[L,buf]=await Promise.all([loadPdfLib(),loadSheet()]);const doc=await L.PDFDocument.load(buf);const form=doc.getForm();
  const F={TiBo:await doc.embedFont(L.StandardFonts.TimesRomanBold),TiRo:await doc.embedFont(L.StandardFonts.TimesRoman),Helv:await doc.embedFont(L.StandardFonts.Helvetica)};
@@ -1710,7 +1710,7 @@ async function makePdf(name){const[L,buf]=await Promise.all([loadPdfLib(),loadSh
  const daOf=f=>{const w=f.acroField.getWidgets()[0];return(w&&w.getDefaultAppearance&&w.getDefaultAppearance())||f.acroField.getDefaultAppearance()||''};
  // A few fields on the sheet are set to plain black text; they borrow the look of the row beside them so the filled sheet matches.
  const DASIB=k=>k==='language_pct'?'language2_pct':k==='language_ex'?'language2_ex':k==='bind_wise_1_name'?'bind_wise_2_name':k==='thrown_pct'?'missile_pct':/^weapon_3_/.test(k)?k.replace('weapon_3_','weapon_2_'):/^left_leg_/.test(k)?k.replace('left_leg_','right_leg_'):'';
- const fitName=k=>{if(!D.V[k])return;let f;try{f=form.getTextField(k)}catch(e){return}const font=fontOf(f);const w=f.acroField.getWidgets()[0].getRectangle().width-4;const c=pdfNames(name);D.V[k]=c.find(n=>font.widthOfTextAtSize(safe(n,font),10)<=w)||c[c.length-1]};fitName('name');fitName('page2_name');
+ const fitName=k=>{if(!D.V[k])return;let f;try{f=form.getTextField(k)}catch(e){return}const font=fontOf(f);const w=f.acroField.getWidgets()[0].getRectangle().width-4;const c=pdfNames(name).map(titled);D.V[k]=c.find(n=>font.widthOfTextAtSize(safe(n,font),10)<=w)||c[c.length-1]};fitName('name');fitName('page2_name');
  Object.entries(D.V).forEach(([k,v])=>{let f;try{f=form.getTextField(k)}catch(e){return}if(DASIB(k)){try{const da=daOf(form.getTextField(DASIB(k)));const sib=form.getTextField(DASIB(k));if(da){f.acroField.setDefaultAppearance(da);f.acroField.getWidgets().forEach(w=>w.setDefaultAppearance(da))}f.setAlignment(sib.getAlignment())}catch(e){}}const font=fontOf(f);f.setText(safe(v,font));if(/^life_/.test(k))f.setFontSize(10);if(/^note_/.test(k))f.setFontSize(9);f.updateAppearances(font)});
  D.B.forEach(k=>{try{const cb=form.getCheckBox(k);cb.check();cb.defaultUpdateAppearances()}catch(e){}});
  Object.entries(D.CAP).forEach(([k,cap])=>{try{const b=form.getButton(k);b.acroField.getWidgets().forEach(w=>{w.dict.delete(L.PDFName.of('BS'));w.getOrCreateAppearanceCharacteristics().setCaptions({normal:cap})});b.updateAppearances(F.TiBo)}catch(e){}});
