@@ -289,7 +289,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-13';
+const APPVER='2026.10.17-14';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1008,9 +1008,8 @@ function relCard(key){const r=relRef(key);if(!r)return'';const m=r.meta,id=key.r
  return`<div class="relcard"><div class="lab"><span><b>${esc(r.role)}${nm?' · '+esc(nm):''}</b> <span class="hint">${esc(r.from)}</span></span>${r.own!==undefined?`<button class="link sm" data-act="rdel" data-val="${r.own}">Remove</button>`:''}</div>
  <div class="chips">${ROLES4.map(x=>chip(x,r.role===x,'rrole',key+'|'+x)).join('')}</div>${r.role?`<span class="hint">${ROLEDESC[r.role]||''}</span>`:''}
  <div class="chips"><input class="text" style="width:auto;flex:1;min-width:10em" id="rn_${id}" data-rname="${key}" value="${esc(nm)}" placeholder="Their name" aria-label="Name"><select data-rsex="${key}" aria-label="Their sex"><option value="" ${sx?'':'selected'}>Not stated</option><option value="Male" ${sx==='Male'?'selected':''}>Male</option><option value="Female" ${sx==='Female'?'selected':''}>Female</option></select>${rollBtn('rname:'+key,'Roll a name')}</div>
- <div class="chips" style="align-items:center"><span class="hint">Romance</span>${[['','None'],['current','Current lover'],['former','Former lover']].map(([v,l])=>chip(l,(m.rRom||'')===v,'rrom',key+'|'+v)).join('')}${r.sug?'<span class="tag">Suggested by this event</span>':''}</div>
  <div class="chips"><button class="btn" data-act="rgoal" data-val="${key}">Make a goal from this</button></div>
- <textarea class="text" rows="2" maxlength="300" id="rt_${id}" data-rnote="${key}" placeholder="Notes: who they are to you, how it stands now" aria-label="Notes on this relationship">${esc(m.rNote||'')}</textarea><span class="hint rcnt" id="rc_${id}"></span></div>`}
+ <textarea class="text" rows="2" maxlength="300" id="rt_${id}" data-rnote="${key}" placeholder="${r.sug?'This event suggests a romance. Who were they to you?':'Notes: who they are to you, how it stands now'}" aria-label="Notes on this relationship">${esc(m.rNote||'')}</textarea><span class="hint rcnt" id="rc_${id}"></span></div>`}
 function tgPanel(){const tr=S.traits,full=tr.length>=3;const sw=signWords();const desc=S.abil.map(a=>a.desc).filter(Boolean);
  const draw=[...LIFET.filter(([t])=>S.life[t]).map(([t])=>lifeEv(t).name+(S.life[t].rel?' ('+relText(S.life[t])+')':'')),...allyList(),S.parent,S.standing?S.standing+' in the clan':'',S.concept].filter(Boolean);
  return`<header><h2>Traits, relationships and goals</h2><p>How your character tends to behave, who matters to them, and what they are trying to do. Traits can change as the campaign unfolds. Goals are how you earn experience, and the people in your life are the best place to find them.</p></header>
@@ -1129,13 +1128,14 @@ function rollClan(){const s=nameSet();if(ivClan()&&S.place&&S.ivc!=='minor'&&S.i
 function npcName(force){const fem=force==='Female'?true:force==='Male'?false:S.sex==='Male'?rnd(100)<=20:S.sex==='Female'?rnd(100)<=60:rnd(2)===1;npcName.last=fem?'Female':'Male';const s=nameSet(true);const key=s.given.split('+').map(x=>x.slice(0,-1)+(fem?'w':'m')).join('+');
  const g=rollPart(key,s.cult);if(elder()||!s.clan)return g;const clan=ivClan()?ivGreatClan():rollPart(s.clan,s.cult);
  if(ivNative()){const f=rollPart(s.given,s.cult);return g+' '+f+(fem?'dedt':'sen')+', of clan '+clan}return g+' of '+clan}
-const allyText=i=>{const a=S.allies[i],n=(S.allyNames||[])[i],t=romTag((S.allyMeta||[])[i]);if(!n)return a+t;const[k,w]=a.split(': ');return k+': '+n+', '+w+t};
-const allyList=()=>[...(S.allies||[]).map((_,i)=>allyText(i)),...(S.ownRel||[]).map(o=>o.role+': '+(o.name||'unnamed')+romTag(o))];
+const allyText=i=>{const a=S.allies[i],n=(S.allyNames||[])[i];if(!n)return a;const[k,w]=a.split(': ');return k+': '+n+', '+w};
+const allyList=()=>[...(S.allies||[]).map((_,i)=>allyText(i)),...(S.ownRel||[]).map(o=>o.role+': '+(o.name||'unnamed'))];
 /* Notes the player wrote about people, as [who, note]. */
 const relNotes=()=>relKeys().map(relRef).filter(r=>r&&(r.meta.rNote||'').trim()).map(r=>[r.role+(r.name?' '+r.name:''),r.meta.rNote.trim()]);
-const ROMTXT={current:'current lover',former:'former lover'};
-const relText=l=>l.rel?'a '+l.rel.toLowerCase()+(l.relName?', '+l.relName:'')+(l.rRom?' ('+ROMTXT[l.rRom]+')':''):'';
-/* Relationships: one card each on Traits, relationships & goals, for a life event's "someone", a person from the travel roll, or one the player adds (S.ownRel). Each has a sex (Male, Female or "" for not stated) that name rolls follow, a romance (current or former lover) and short notes, kept as rSex, rRom and rNote. */
+const relText=l=>l.rel?'a '+l.rel.toLowerCase()+(l.relName?', '+l.relName:''):'';
+/* Relationships: one card each on Traits, relationships & goals, for a life event's "someone", a person from the travel roll, or one the player adds (S.ownRel). Each has a sex (Male, Female or "" for not stated) that name rolls follow, and short notes, kept as rSex and rNote. */
+/* Characters saved with the short-lived romance setting (rRom) have it folded into the start of their notes. */
+function foldRom(st){const one=m=>{if(m&&m.rRom){const t=m.rRom==='current'?'Current lover.':'Former lover.';m.rNote=(t+' '+(m.rNote||'')).trim().slice(0,300);delete m.rRom}};if(!st)return;Object.values(st.life||{}).forEach(one);(st.allyMeta||[]).forEach(one);(st.ownRel||[]).forEach(one)}
 const ROLES4=['Friend','Patron','Rival','Adversary'];
 const ROLEDESC={Friend:'Generally has your best interests at heart and goes out of their way to assist you.',Patron:'A figure of higher standing who provides resources, information, or status, but expects loyalty, service, or repayment in return.',Rival:'Competes with you in a shared field; not actively an enemy, but takes opportunities to supplant or outperform you.',Adversary:'An active enemy seeking revenge, justice, or harm due to a past conflict.'};
 const ROMANCE_EV=['Amorous Adventure','Courtly Affair'];
@@ -1145,8 +1145,8 @@ function relRef(key){const i=key.indexOf(':'),k=key.slice(0,i),x=key.slice(i+1);
   return{key,meta:m,get role(){return S.allies[n].split(': ')[0]},set role(v){S.allies[n]=v+': '+who()},get name(){return(S.allyNames||[])[n]||''},set name(v){(S.allyNames||(S.allyNames=[]))[n]=v},from:'Your travels: '+who(),sug:false}}
  const o=(S.ownRel||[]).find(r=>r.id===x);if(!o)return null;return{key,meta:o,get role(){return o.role},set role(v){o.role=v},get name(){return o.name||''},set name(v){o.name=v},from:'Added by you',sug:false,own:o.id}}
 const relKeys=()=>[...LIFET.filter(([t])=>S.life[t]&&S.life[t].rel).map(([t])=>'life:'+t),...(S.allies||[]).map((_,i)=>'ally:'+i),...(S.ownRel||[]).map(o=>{if(!o.id)o.id=newId();return'own:'+o.id})];
-/* A rolled name follows the person's sex if set; a lover with none set leans to the opposite sex. */
-function rollRelName(key){const r=relRef(key);if(!r)return;const m=r.meta;const opp=S.sex==='Male'?'Female':S.sex==='Female'?'Male':'';r.name=npcName(m.rSex||(m.rRom?opp:''));m.rSex=npcName.last}
+/* A rolled name follows the person's sex if set. */
+function rollRelName(key){const r=relRef(key);if(!r)return;const m=r.meta;r.name=npcName(m.rSex||'');m.rSex=npcName.last}
 /* ♂/♀ beside a name on Life events and Kin & travel: shows the person's sex; click to set it, click again to clear (Not stated). */
 const sexBtns=key=>{const r=relRef(key),x=r&&r.meta.rSex||'';return[['Male','♂'],['Female','♀']].map(([v,g])=>`<button class="chip rsx" aria-pressed="${x===v}" data-act="rsex" data-val="${key}|${v}" aria-label="${v}" title="${v}">${g}</button>`).join('')};
 /* Goals tied to a relationship keep its key (g.rel) and a label in case the person is later removed. "Make a goal from this" starts the builder with a phrase for the role. */
@@ -1156,7 +1156,7 @@ const relPick=r=>r.name?relLabel(r):r.role+' ('+r.from+')';
 const tieLabel=g=>{if(!g.rel)return'';const r=relRef(g.rel);return r?relPick(r):g.relLabel||''};
 const GOALSTART={Friend:'help ',Patron:'repay ',Rival:'outdo ',Adversary:'bring '};
 const goalStart=r=>{const who=r.name||'my '+r.role.toLowerCase();return(GOALSTART[r.role]||'')+who+(r.role==='Adversary'?' to justice':'')};
-const romTag=m=>m&&m.rRom?' ('+ROMTXT[m.rRom]+')':'';
+
 function fullName(){const s=nameSet();if(!S.clan&&!elder())rollClan();if(patroOn()&&!S.father)rollFather();const g=rollPart(s.given,s.cult);S.given=g;return everyday()}
 /* Bynames: an everyday name that takes precedence. With one, the name reads "Erik Halfhand" and the formal name (patronymic, clan) sits beneath it.
    Ticked by default when a character has neither clan nor patronymic. */
@@ -1527,9 +1527,9 @@ function syncList(d){const gone=new Set([...(Array.isArray(d.gone)?d.gone:[]),..
 function store(){if(syncing)return;try{let d=null;try{d=JSON.parse(localStorage.getItem(STOREKEY)||'null')}catch(e){}const gone=d&&d.v===2?syncList(d):new Set(GONE);localStorage.setItem(STOREKEY,JSON.stringify({v:2,list:CHARS,current:CUR,GM,gone:[...gone].slice(-500)}));GONE.clear();saveOK=true;saveFull=false}catch(e){saveOK=false;saveFull=!!e&&(e.name==='QuotaExceededError'||e.code===22||e.name==='NS_ERROR_DOM_QUOTA_REACHED')}}
 function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e){const nm=currentName();if(!e.S||strip(e.S)!==strip(S)||e.name!==nm)e.saved=Date.now();e.name=nm;if(e.copy&&e.name!==e.copy.name)delete e.copy;e.S=JSON.parse(JSON.stringify(S));e.sum=summary()}}
  store();const n=$('#savenote');n.textContent=saveOK?'Saved in this browser':saveFull?'Not saved: this browser\'s storage is full. Remove a portrait, or download and delete old characters.':'Not saved: this browser is blocking storage';n.classList.toggle('bad',!saveOK)}
-function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STOREKEY)||'null');if(d&&d.v===2&&Array.isArray(d.list)){CHARS=d.list.filter(c=>c&&c.id&&c.S&&typeof c.S==='object');CUR=CHARS.some(c=>c.id===d.current)?d.current:null;Object.assign(GM,d.GM||{});return}}catch(e){}
+function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STOREKEY)||'null');if(d&&d.v===2&&Array.isArray(d.list)){CHARS=d.list.filter(c=>c&&c.id&&c.S&&typeof c.S==='object');CHARS.forEach(c=>foldRom(c.S));CUR=CHARS.some(c=>c.id===d.current)?d.current:null;Object.assign(GM,d.GM||{});return}}catch(e){}
  try{const d=JSON.parse(localStorage.getItem(SAVEKEY)||'null');if(d&&d.v===1&&d.S&&typeof d.S==='object'){Object.assign(GM,d.GM||{});const id=newId();CHARS=[{id,name:d.name||'',S:d.S,saved:Date.now(),sum:null}];CUR=id}}catch(e){}}
-function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));if(!('orbLang' in e.S))S.orbLang='Ivinian';if(!S.nameV)migrateName(e.name);fixSw();$('#name').value=currentName();CUR=id;VIEW='char';viewPhase=null;pendingDel=null;return true}
+function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;foldRom(e.S);S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));if(!('orbLang' in e.S))S.orbLang='Ivinian';if(!S.nameV)migrateName(e.name);fixSw();$('#name').value=currentName();CUR=id;VIEW='char';viewPhase=null;pendingDel=null;return true}
 function addChar(roll){S=blank();S.step=ORDER[0];if(roll)rollAll();const id=newId();S.nameV=2;const nm=roll&&canName()?fullName():'';CHARS.unshift({id,name:nm,S:JSON.parse(JSON.stringify(S)),saved:Date.now(),sum:null});$('#name').value=nm;CUR=id;VIEW='char';viewPhase=null;pendingDel=null}
 /* Duplicate a character, portrait and all. The list shows "(copy)" after the copy's name until it is renamed; the label never reaches the sheet or the files. If storage is full the copy is dropped and dupMsg says why. */
 let dupMsg=null;
@@ -1644,7 +1644,7 @@ function pdfData(name){const V={},B=[],CAP={},N=[];const c=culture();const {led,
  gl.forEach((g,i)=>{if(i<12){const f='goal_'+(i<6?'left_':'right_')+(i%6+1);set(f,g.text);if(g.kind!=='individual')B.push(f+'_shared')}else N.push('Goal'+(g.kind!=='individual'?' (shared)':'')+': '+g.text)});
  ['gear','ammo','rations','medical'].forEach(k=>set('supply_'+k,'d12'));
  if(S.gear.coin!==null)set('silver_pieces',G.left);if(S.cls)set('status',statusVal());
- const npc=[...LIFET.filter(([k])=>S.life[k]&&S.life[k].rel).map(([k])=>S.life[k].rel+(S.life[k].relName?': '+S.life[k].relName:'')+(S.life[k].rRom?', '+ROMTXT[S.life[k].rRom]:'')+' (from '+lifeEv(k).name+')'),...allyList()];
+ const npc=[...LIFET.filter(([k])=>S.life[k]&&S.life[k].rel).map(([k])=>S.life[k].rel+(S.life[k].relName?': '+S.life[k].relName:'')+' (from '+lifeEv(k).name+')'),...allyList()];
  npc.forEach((x,i)=>i<5?set('relationship_npc_'+(i+1),x):N.push('NPC: '+x));
  set('inventory_max_enc',A.inv.val);
  const inv=[...S.gear.items.filter(x=>!x.hand).map(x=>[x.n,WMAP[x.n][4]]),...S.gear.misc.map(n=>[n,MISC.find(m=>m[0]===n)[2]])];
@@ -1665,7 +1665,7 @@ function page3Data(){const c=culture();const t=tongues();const R=[];const has=v=
  /* Relationships: the role in the label, then name, sex, romance, where they came from, the player's notes and any goals tied to them. */
  const dot=x=>/[.!?…]$/.test(x)?x:x+'.';
  sec('Relationships',relKeys().map(relRef).filter(Boolean).map(r=>{const m=r.meta,gs=S.goals.filter(g=>g.rel===r.key).map(g=>g.text);
-  return[r.role,[[r.name,m.rSex?m.rSex.toLowerCase():'',m.rRom?ROMTXT[m.rRom]:''].filter(Boolean).join(', '),r.own!==undefined?'':'From '+r.from.replace(/^Your /,'your '),(m.rNote||'').trim(),...gs.map(g=>'Goal: '+g)].filter(Boolean).map(dot).join(' ')]}));
+  return[r.role,[[r.name,m.rSex?m.rSex.toLowerCase():''].filter(Boolean).join(', '),r.own!==undefined?'':'From '+r.from.replace(/^Your /,'your '),(m.rNote||'').trim(),...gs.map(g=>'Goal: '+g)].filter(Boolean).map(dot).join(' ')]}));
  return R}
 async function addPage3(doc,L,F,safe,name){const T=await p3Fonts(doc,F);const W=612,H=792,M=18,G=12,PW=Math.round((W-2*M-G)/3),LW=W-2*M-G-PW,TOP=700,BOT=28;
  const red=L.rgb(.502,0,0),ink=L.rgb(.17,.17,.17),grey=L.rgb(.42,.42,.42),bar=L.rgb(.91,.91,.91),edge=L.rgb(.35,.35,.35);
@@ -1775,8 +1775,8 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   if(a.startsWith('lk'))lookAct(a,v);
   else if(a==='go')goStep(+v);
   else if(a==='title')S.title=(S.title||'')===v?'':v;
-  else if(a==='rrole'||a==='rrom'||a==='rsex'){const i=v.lastIndexOf('|'),r=relRef(v.slice(0,i)),x=v.slice(i+1);if(r){if(a==='rrole')r.role=x;else if(a==='rrom')r.meta.rRom=x;else r.meta.rSex=r.meta.rSex===x?'':x}}
-  else if(a==='radd'){if(!S.ownRel)S.ownRel=[];S.ownRel.push({id:newId(),role:'Friend',name:'',rSex:'',rRom:'',rNote:''})}
+  else if(a==='rrole'||a==='rsex'){const i=v.lastIndexOf('|'),r=relRef(v.slice(0,i)),x=v.slice(i+1);if(r){if(a==='rrole')r.role=x;else r.meta.rSex=r.meta.rSex===x?'':x}}
+  else if(a==='radd'){if(!S.ownRel)S.ownRel=[];S.ownRel.push({id:newId(),role:'Friend',name:'',rSex:'',rNote:''})}
   else if(a==='rdel'){if(S.ownRel)S.ownRel=S.ownRel.filter(o=>o.id!==v)}
   else if(a==='b30'){const[c,x]=v.split('|');S.b30[c]=S.b30[c]===x?'':x}
   else if(a==='career'){const nv=S.career===v?'':v;if(nv!==S.career){S.occ2='';S.swPath='';S.chantry=''}S.career=nv}
