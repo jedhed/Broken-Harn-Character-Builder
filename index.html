@@ -161,6 +161,7 @@ dd{margin:0}
 .about{border-top:1px solid var(--muted);padding-top:10px;margin-top:auto}
 .about p{margin:0 0 6px;max-width:75ch}
 .about .ver{font-weight:700}
+details.gdet{margin-top:8px;border:1px solid var(--hair);padding:6px 10px}details.gdet>*:not(summary){margin-top:6px}details.gdet>.hint{display:block}details.gdet summary{cursor:pointer;font-weight:700}
 details.calls{border-top:1px solid var(--muted);padding-top:10px;margin-top:auto}
 .about+details.calls{margin-top:4px}
 details.calls summary{cursor:pointer;font-weight:700}
@@ -289,7 +290,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-17';
+const APPVER='2026.10.17-18';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -558,7 +559,7 @@ const FAITH={
  "Save-K'nor":{of:'knowledge and reason',acolyte:'Manídar',ordained:'Halíki',note:'Each belongs to one of three orders: the Hýn-Aelôri (scholars), Rydequélyn (jesters) or Shéa-Al-Aécôr (diplomats).'},
  Siem:{of:'dreams and mysteries',ordained:'Inthiar',note:'Inthiar is the title of a human priest. Among elves and dwarves there are no offices.'}};
 const ROLES={lay:'Lay follower',acolyte:'Acolyte',senior:'Senior acolyte',order:'Fighting order',ordained:'Ordained'};
-const roleAllowed=r=>{if(S.deity!=='Halea'||!S.sex)return true;if(r==='acolyte'||r==='ordained')return S.sex==='Female';if(r==='order')return S.sex==='Male';return true};
+const roleAllowed=r=>{if(S.deity!=='Halea'||!S.sex||S.sex==='Neither')return true;if(r==='acolyte'||r==='ordained')return S.sex==='Female';if(r==='order')return S.sex==='Male';return true};
 const titleOf=()=>S.role==='lay'||!FAITH[S.deity]?'follower':FAITH[S.deity][S.role];
 function careerLine(){if(S.career==='Godbound'&&S.deity)return'Godbound of '+esc(S.deity)+', '+titleOf()+(S.occ2?' ('+S.occ2.toLowerCase()+')':'');if(S.career==='Spellweaver'){if(arcanist())return'Spellweaver, non-Pvarist arcanist'+(S.occ2?' ('+S.occ2.toLowerCase()+')':'');const ch=S.chantry&&chantryOk()?', of the '+S.chantry+' chantry':'';if(S.occ2===HANMAVAR)return'Spellweaver, Hanmavâr of the Shek-Pvar'+ch;return'Spellweaver, Shek-Pvar'+(convOf()?' of the '+convOf()+' convocation':'')+ch}return S.career+(S.occ2?' ('+S.occ2.toLowerCase()+')':'')}
 function careerExtra(){if(S.career==='Spellweaver')return'<div class="result">Tradition: <b>Shek-Pvar</b>, the dominant school of magic on Hârn. You choose a convocation at the career step.</div>';
@@ -808,7 +809,9 @@ function rollCx(){const c=cxCols().map(k=>rollT(CX_T[k]));if(c.length===1)return
 function hairCol(){if(S.folk==='Sindarin')return'sind';if(S.folk==='Khuzdul')return'khuz';const i=CXS.indexOf(LK().cx);return i<=1?'light':i===2?'med':i===3?'dark':'vdark'}
 function eyeCol(){if(S.folk==='Sindarin')return'sind';const i=CXS.indexOf(LK().cx);return i<=1?'light':i===2?'med':'dark'}
 /* HM3 heights: the fixed part, before 4d6. */
-function htBase(){const fem=S.sex==='Female';if(S.folk==='Khuzdul')return 40;if(S.folk==='Sindarin')return 51-(fem?1:0);return 54-(fem?5:S.sex?0:2)}
+/* Gender details: S.sex is the gender the character lives as (Female, Male or Neither). S.born is a birth sex that differs from it, and S.bornWhy says why: 'who' (it's who they are) or 'disguise'. Height and a beard follow birth sex; everything else follows gender. */
+const bodySex=()=>S.born||S.sex;
+function htBase(){const fem=bodySex()==='Female';if(S.folk==='Khuzdul')return 40;if(S.folk==='Sindarin')return 51-(fem?1:0);return 54-(fem?5:bodySex()&&bodySex()!=='Neither'?0:2)}
 function htMods(){if(S.folk!=='Human')return[];const m=[];if(S.nation==='ivinia'||S.dual==='ivinia'||(orbP()==='Ivinian'&&!orbMixed()))m.push([1,'Ivinian']);if(S.cls==='noble')m.push([2,'noble']);if(env()==='City'&&['slave','serf','unguilded'].includes(S.cls))m.push([-2,'urban poor']);return m}
 /* The size score: 10 is an average person. It picks the frame, never shown as a number. */
 function sizeInfo(){const{led}=ledger();const v=x=>Math.max(0,Math.min(70,(led[x]||[]).reduce((a,p)=>a+p[0],0)));let s=10;const why=[];const str=S.abil.some(a=>a.name==='Strength');
@@ -877,7 +880,7 @@ function rollHair(){const c=culture();const north=['Viking','Tribal'].includes(c
  else{st=pickT(north?HS.womenNorth:HS.women);
   if(north){if(rnd(10)===1)st+=', '+pickT(HS.coverNorth)}
   else{const sg=slSuggest(sizeInfo());if(rnd(100)<=Math.round(50-45*sg/100))st+=' '+pickT(S.cls==='noble'?HS.coverNoble:HS.cover)}}
- if(S.folk==='Human'&&S.sex==='Male')st+='; '+pickT(north?[['clean-shaven',1],['stubble',1],['moustache',1],['short beard',3],['long beard',3]]:[['clean-shaven',3],['stubble',2],['moustache',1],['short beard',3],['long beard',1]]);
+ if(S.folk==='Human'&&S.sex==='Male'&&bodySex()==='Male')st+='; '+pickT(north?[['clean-shaven',1],['stubble',1],['moustache',1],['short beard',3],['long beard',3]]:[['clean-shaven',3],['stubble',2],['moustache',1],['short beard',3],['long beard',1]]);
  return st.charAt(0).toUpperCase()+st.slice(1)}
 /* Life on the face, for the prompt only. */
 function weathering(){const outd=['rural','barbarian','wanderer'].includes(S.bg)||['Ranger','Warrior'].includes(S.career)||/farm|hunt|fish|sail|seam|herd|shepherd|miner|charcoal|timber|teamster|pilot|forest|trapper/i.test((S.occ||'')+' '+(S.occ2||''));
@@ -923,7 +926,7 @@ const ART_STYLE='Hand-drawn fantasy character portrait in a traditional ink-and-
 const ART_NEG='Photorealism, 3D rendering, glossy digital airbrushing, plastic skin, anime proportions, oversized eyes, flat vector fills, perfectly uniform outlines, neon colors, dramatic cinematic lighting, excessive bloom, elaborate background.';
 /* What an image generator can use: things that show in a picture, plus a hint of temperament. Hârn names mean nothing to it, so peoples are described by look and dress. */
 function lookOf(){const c=culture();const p=S.nation==='orbaal'?S.people:'';const jarin=p==='Jarin'||(S.nation==='tribal'&&S.place&&!TRIBE_HARNIC.includes(S.place));
- if(S.folk==='Khuzdul')return'a dwarf, short, stocky and broad-shouldered'+(S.sex==='Female'?'':', with a long braided beard');
+ if(S.folk==='Khuzdul')return'a dwarf, short, stocky and broad-shouldered'+(bodySex()==='Female'?'':', with a long braided beard');
  if(S.folk==='Sindarin')return'an elf, tall and slender, with ageless features and pointed ears';
  if(c==='Viking'&&p!=='Jarin')return'Norse, in Viking-age dress';
  if(jarin)return'Celtic-looking, in Celtic-influenced dress';
@@ -994,6 +997,11 @@ function titleField(){const sg=titleSugs();
  return`<div class="field"><div class="lab"><label for="title"><b>Title</b> <span class="hint">optional, shown before the name</span></label></div><input class="text" id="title" data-title="1" value="${esc(S.title||'')}" placeholder="None">
  ${sg.length?`<div class="chips">${sg.map(t=>chip(esc(t),(S.title||'')===t,'title',esc(t))).join('')}</div>`:''}
  ${S.cls==='noble'?`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-knight="1" ${knighted()?'checked':''}> Knighted: Sir and Dame are for those knighted themselves, usually at 21${knightYear()&&knighted()?` (${knightYear()})`:''}</label>`:''}</div>`}
+function genderDetails(){const born=S.sex==='Male'?['Female']:S.sex==='Female'?['Male']:S.sex==='Neither'?['Female','Male']:[];
+ return`<details class="gdet" ${S.sex==='Neither'||S.born?'open':''}><summary>Gender details</summary>
+ <div class="chips">${chip('Neither',S.sex==='Neither','gneither','1')}</div><span class="hint">Neither male nor female. Names come from both lists, with the male patronymic, and titles offer both forms. Church offices kept to one gender, such as Halea's, are the GM's call.</span>
+ ${born.length?`<div class="lab" style="margin-top:6px"><b>Born a different sex</b> <span class="hint">optional</span></div><div class="chips">${born.map(x=>chip('Born '+x.toLowerCase(),S.born===x,'gborn',x)).join('')}</div>`:''}
+ ${S.born?`<div class="chips">${chip('It’s who they are',S.bornWhy!=='disguise','gwhy','who')}${chip('A disguise',S.bornWhy==='disguise','gwhy','disguise')}</div><span class="hint">Height and whether they can grow a beard follow birth sex; names, titles and the portrait follow their gender.${S.bornWhy==='disguise'?' A smooth face can give a disguise away.':''}</span>`:''}</details>`}
 function namePanel(){const ev=everyday(),fm=formalName();
  return`<header><h2>Name and appearance</h2><p>What your character is called, and what they look like. Everything here can be rolled, and changed at any time.</p></header>
  <div class="sub"><div class="lab"><span><b>Name</b></span><button class="btn roll" data-act="rollwhole">Roll the whole name</button></div>
@@ -1349,14 +1357,14 @@ const knightYear=()=>{if(!ageSettled())return'';const a=ageYears();return yearTx
 const knightTxt=()=>knighted()?'Knighted'+(knightYear()?' '+knightYear():''):'';
 /* "Ulânkh (mendicant) or Aperâni (temple master)" gives Ulânkh and Aperâni. */
 const splitTitles=t=>t.replace(/\s*\([^)]*\)/g,'').split(/,\s*|\s+or\s+/).map(x=>x.trim()).filter(Boolean);
-function titleSugs(){const o=[],add=(...x)=>x.forEach(t=>{if(t&&!o.includes(t))o.push(t)});const f=S.sex==='Female';
- if(S.cls==='noble'){if(knighted())add(f?'Dame':'Sir');else if(S.career==='Warrior')add('Squire');if(f)add('Lady')}
+function titleSugs(){const o=[],add=(...x)=>x.forEach(t=>{if(t&&!o.includes(t))o.push(t)});const f=S.sex==='Female',nb=S.sex==='Neither';
+ if(S.cls==='noble'){if(knighted())add(...(nb?['Sir','Dame']:[f?'Dame':'Sir']));else if(S.career==='Warrior')add('Squire');if(f||nb)add('Lady')}
  if(S.career==='Warrior'&&S.occ2==='Huscarl')add('Huscarl');
  if(S.career==='Warrior'&&S.occ2==='Legionnaire')add('Molak','Arkalin','Melbrin','Molarin');
  if(S.career==='Rogue'&&S.occ2==='Thief (Lia-Kavair)')add('Hand','Tom');
  if(S.career==='Godbound'&&['senior','ordained','order'].includes(S.role)&&FAITH[S.deity]){const t=FAITH[S.deity][S.role];if(t)add(...splitTitles(t));if(S.deity==='Sarajin')add('Skald')}
  if(isSw()&&S.swPath==='pvar'){add('Satía Mavâr');if(S.age!=='Young')add('Shenâva');if(S.age==='Old')add('Vîrán')}
- if(arcanist()&&S.occ2==='Shaman')add({Taelda:'Tuathar',Chymak:'Sarfaeda',Adaenum:'Olna'}[S.place]||(S.place==='Bujoc'&&f?'Sha Woman':'Shaman'));
+ if(arcanist()&&S.occ2==='Shaman'){const t={Taelda:'Tuathar',Chymak:'Sarfaeda',Adaenum:'Olna'}[S.place];if(t)add(t);else if(S.place==='Bujoc'&&(f||nb))add('Sha Woman',...(nb?['Shaman']:[]));else add('Shaman')}
  return o}
 /* The Upbringing step's "Background skills" line: the household the character grew up in, and where. The family's role goes in brackets, since trade names such as "Soldier: Mercenary/Viking" don't read well inside a sentence. */
 function bgLine(){const o=S.occ,base='The skills you learned growing up';if(!o||!S.cls||!S.place)return base+'.';
@@ -1438,7 +1446,7 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
   <div class="field"><div class="lab"><span><b>Folk</b> <span class="hint">nearly everyone on Hârn is human; the GM decides whether the elder folk can be played</span></span></div>
   <div class="cards">${[['Human','The peoples of the kingdoms and the tribal nations.'],['Sindarin','The elves of Evael. Few, long-lived, and seldom seen abroad.'],['Khuzdul','The dwarves of Azadmere. Makers and miners.']].map(([f,t])=>{const lock=f!=='Human'&&!GM[f];return`<button class="card" aria-pressed="${S.folk===f}" data-act="folk" data-val="${f}" ${lock?'disabled':''}><span class="tag ${lock?'lock':''}">${lock?'Locked by the GM':f==='Human'?'Usual choice':'Unlocked'}</span><h3>${f}</h3><span>${t}</span></button>`}).join('')}</div>
   ${GM.Sindarin||GM.Khuzdul?'<span class="hint">Traits for the elder folk aren\'t written yet, so later steps treat them much like humans for now.</span>':''}</div>
-  <div class="field"><div class="lab"><b>Gender</b>${rollBtn('sex','Roll d100')}</div><div class="chips">${['Female','Male'].map(x=>chip(x,S.sex===x,'sex',x)).join('')}</div><span class="hint">Your choice. It matters for a few church offices, such as Halea's.</span></div>
+  <div class="field"><div class="lab"><b>Gender</b>${rollBtn('sex','Roll d100')}</div><div class="chips">${['Female','Male'].map(x=>chip(x,S.sex===x,'sex',x)).join('')}${S.sex==='Neither'?chip('Neither',true,'gneither','1'):''}</div><span class="hint">Your choice. It matters for a few church offices, such as Halea's.</span>${genderDetails()}</div>
   <div class="field"><div class="lab"><b>Age</b></div><div class="chips">${['Young','Adult','Old'].map(a=>chip(a,S.age===a,'age',a)).join('')}</div><div class="result"><b>${S.age}.</b> ${ageTxt[S.age]} <span class="hint">These points are spent on Rounding out.</span></div>
    <div class="agerow"><label for="years"><b>Age in years</b></label><input type="range" id="years" data-years min="${AGE_R[S.age][0]}" max="${AGE_R[S.age][1]}" step="1" value="${ageYears()}"><output id="yearsOut" for="years">${ageYears()}</output>${rollBtn('years','Roll an age')}</div>
    <span class="hint"><span id="bornOut">${bornLine()}</span> · Age as of ${campTxt()}.</span></div>
@@ -1754,7 +1762,7 @@ const TABKEY='broken-harn:tab';
 function tabMemo(){try{sessionStorage.setItem(TABKEY,JSON.stringify({view:VIEW,cur:CUR}))}catch(e){}}
 function render(){syncGM();tabMemo();const st=VIEW==='start';$('#start').hidden=!st;$('#steps').hidden=st;$('#cols').hidden=st;$('#lnk-chars').hidden=st;document.querySelector('.banner').classList.toggle('inchar',!st);
  if(st){$('#sect').textContent='Characters';store();startScreen();return}
- ageSettled();(S.lastIn||(S.lastIn={}))[phaseOf(S.step)]=S.step;$('#sect').textContent=STEPS[S.step];steps();panel();sheet();$('#name').value=titled(currentName());showFormal();showPortrait();saveNow();pdfGate()}
+ ageSettled();if(S.born&&(S.born===S.sex||!S.sex))S.born='';(S.lastIn||(S.lastIn={}))[phaseOf(S.step)]=S.step;$('#sect').textContent=STEPS[S.step];steps();panel();sheet();$('#name').value=titled(currentName());showFormal();showPortrait();saveNow();pdfGate()}
 
 /* ---------- events ---------- */
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.val;
@@ -1782,6 +1790,9 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='career'){const nv=S.career===v?'':v;if(nv!==S.career){S.occ2='';S.swPath='';S.chantry=''}S.career=nv}
   else if(a==='role')S.role=v;
   else if(a==='sex')S.sex=S.sex===v?'':v;
+  else if(a==='gneither')S.sex=S.sex==='Neither'?'':'Neither';
+  else if(a==='gborn'){S.born=S.born===v?'':v;if(S.born&&!S.bornWhy)S.bornWhy='who'}
+  else if(a==='gwhy')S.bornWhy=v;
   else if(a==='sign'){const i=SIGNS.findIndex(x=>x[0]===v);const start=SIGNS[i][1];const len=(SIGNS[(i+1)%12][1]-start+360)%360;const doy=((start+1+rnd(len-4)-1)%360)+1;const m=Math.ceil(doy/30);S.birth={m,d:doy-(m-1)*30}}
   else if(a==='cusp')S.cuspPick=v;
   else if(a==='orbLang')S.orbLang=v;
