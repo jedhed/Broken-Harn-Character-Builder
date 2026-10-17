@@ -286,7 +286,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-7';
+const APPVER='2026.10.17-8';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -987,9 +987,14 @@ function portraitPanel(){const ok=portOK(S.portrait);const ed=S.prompt&&(S.promp
 function clanField(){const n=NAT[S.nation];if(elder())return'';return`<div class="field"><div class="lab"><label for="clan"><b>Clan</b> <span class="hint">everyone belongs to one. A noble bears its name; anyone else is “of” it.</span></label>${rollBtn('clan','Roll a clan')}</div><input class="text" id="clan" data-set="clan" value="${esc(S.clan)}" placeholder="Your clan's name"><span class="hint">${ivClan()?'A greatclan member or thrall usually belongs to the clan holding '+esc(S.place||'their settlement')+'. Minor clans and independents are half from the Ivinian lists and half invented. A rolled clan is rolled again if you change clan status on Station.':`Half of rolled clans come from the lists for ${S.nation==='tribal'?'the Jarin':S.nation==='orbaal'?'Orbaal':n?esc(n.name):'the feudal realms'}, and half are invented in the same style.`}${n?'':' Choose a birthplace first for clans of the right realm.'}</span></div>`}
 function fatherField(){if(!patroAllowed())return'';return`<div class="field"><div class="lab"><label for="father"><b>Father's name</b> <span class="hint">for a patronymic: -sen for a son, -dedt for a daughter</span></label>${patroOn()?rollBtn('father','Roll a name'):''}</div>${ivNative()?'':`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="patro" data-patro="1" ${patroOn()?'checked':''}> Use a patronymic, in the Ivinian way</label>`}${ivNative()?`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="patro" data-patro="1" ${patroOn()?'checked':''}> Use a patronymic (usual for Ivinians)</label>`:''}${patroOn()?`<input class="text" id="father" data-father="1" value="${esc(S.father)}" placeholder="Your father's given name"><span class="hint">${S.father?`Your patronymic is <b>${esc(patronymic())}</b>.`:'Roll or type a name to make your patronymic.'}</span>`:''}</div>`}
 function bynameField(){return`<div class="field"><div class="lab"><span><b>Byname</b> <span class="hint">an everyday name or nickname. It takes the place of the clan and patronymic in everyday use.</span></span></div><label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="byon" data-byon="1" ${byOn()?'checked':''}> Use a byname</label>${byOn()?`<input class="text" id="byname" data-byname="1" value="${esc(S.byname)}" placeholder="Halfhand, or the Red"><span class="hint">${S.nameHand?'You are writing the whole name yourself (below), so the byname is not added to it. Untick that to build the name from its parts.':S.byname?`Everyday name: <b>${esc(everyday())}</b>${formalName()?` · formal name: ${esc(formalName())}`:''}`:'Type it as it should read. Include “the” if it takes one.'}</span>`:''}</div>`}
+function titleField(){const sg=titleSugs();
+ return`<div class="field"><div class="lab"><label for="title"><b>Title</b> <span class="hint">optional, shown before the name</span></label></div><input class="text" id="title" data-title="1" value="${esc(S.title||'')}" placeholder="None">
+ ${sg.length?`<div class="chips">${sg.map(t=>chip(esc(t),(S.title||'')===t,'title',esc(t))).join('')}</div>`:''}
+ ${S.cls==='noble'?`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-knight="1" ${knighted()?'checked':''}> Knighted: Sir and Dame are for those knighted themselves, usually at 21${knightYear()&&knighted()?` (${knightYear()})`:''}</label>`:''}</div>`}
 function namePanel(){const ev=everyday(),fm=formalName();
  return`<header><h2>Name and appearance</h2><p>What your character is called, and what they look like. Everything here can be rolled, and changed at any time.</p></header>
  <div class="sub"><div class="lab"><span><b>Name</b></span><button class="btn roll" data-act="rollwhole">Roll the whole name</button></div>
+  ${titleField()}
   <div class="field"><div class="lab"><label for="given"><b>Given name</b></label>${rollBtn('given','Roll a given name')}</div><input class="text" id="given" data-given="1" value="${esc(S.given)}" placeholder="Your character's own name"></div>
   ${clanField()}${fatherField()}${bynameField()}
   <div class="field"><label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="nhand" data-nhand="1" ${S.nameHand?'checked':''}> Write the whole name myself</label>${S.nameHand?`<input class="text" id="handname" data-handname="1" value="${esc(S.handName)}" placeholder="The name exactly as it should read"><span class="hint">This replaces the name built from the parts above.</span>`:''}</div>
@@ -1292,6 +1297,23 @@ function rollAll0(){const st=S.step;S=blank();S.step=st;const folks=['Human'];S.
  else if(rnd(100)<=50){const nl=langOf(S.nation,S.cls,S.folk);const o=LANGS.filter(l=>l!==nl&&l!=='Sindarin');S.lang2=otherL()||o[rnd(o.length)-1]}
  if(S.bg==='wanderer')S.lang40='Jarin';S.age=['Young','Adult','Adult','Old'][rnd(4)-1];R.years();R.birth();R.sibs();R.parent();R.standing();R.travel();R.allies();R.abil();R.abilRest();LIFET.forEach(([t])=>{R.life(t);const o=optionsFor(lifeEv(t));S.life[t].pick=o[rnd(o.length)-1]});R.careerAll();R.roAll();R.atAll();R.gearAll();rollLook('');{const k=Object.keys(TRAITS).concat(signWords());const n=1+rnd(2);while(S.traits.length<n){const t=k[rnd(k.length)-1];if(!S.traits.includes(t))S.traits.push(t)}}}
 /* ---------- render ---------- */
+/* Title: free text shown before the name (sidebar, list, .md, PDF; not file names), with suggestions that fit the character. */
+const titled=n=>{const t=(S.title||'').trim();return t&&n?t+' '+n:n};
+/* Knighted: nobles only. Ticked by default for a Warrior whose specialty is Knight; S.knighted holds the player's own choice. Knighted at 21, or this year if 20 or 21. */
+const knighted=()=>S.cls==='noble'&&(typeof S.knighted==='boolean'?S.knighted:S.career==='Warrior'&&S.occ2==='Knight');
+const knightYear=()=>{if(!ageSettled())return'';const a=ageYears();return yearTxt(a<=21?GM.y:(S.birth?birthYear():GM.y-a)+21)};
+const knightTxt=()=>knighted()?'Knighted'+(knightYear()?' '+knightYear():''):'';
+/* "Ulânkh (mendicant) or Aperâni (temple master)" gives Ulânkh and Aperâni. */
+const splitTitles=t=>t.replace(/\s*\([^)]*\)/g,'').split(/,\s*|\s+or\s+/).map(x=>x.trim()).filter(Boolean);
+function titleSugs(){const o=[],add=(...x)=>x.forEach(t=>{if(t&&!o.includes(t))o.push(t)});const f=S.sex==='Female';
+ if(S.cls==='noble'){if(knighted())add(f?'Dame':'Sir');else if(S.career==='Warrior')add('Squire');if(f)add('Lady')}
+ if(S.career==='Warrior'&&S.occ2==='Huscarl')add('Huscarl');
+ if(S.career==='Warrior'&&S.occ2==='Legionnaire')add('Molak','Arkalin','Melbrin','Molarin');
+ if(S.career==='Rogue'&&S.occ2==='Thief (Lia-Kavair)')add('Hand','Tom');
+ if(S.career==='Godbound'&&['senior','ordained','order'].includes(S.role)&&FAITH[S.deity]){const t=FAITH[S.deity][S.role];if(t)add(...splitTitles(t));if(S.deity==='Sarajin')add('Skald')}
+ if(isSw()&&S.swPath==='pvar'){add('Satía Mavâr');if(S.age!=='Young')add('Shenâva');if(S.age==='Old')add('Vîrán')}
+ if(arcanist()&&S.occ2==='Shaman')add({Taelda:'Tuathar',Chymak:'Sarfaeda',Adaenum:'Olna'}[S.place]||(S.place==='Bujoc'&&f?'Sha Woman':'Shaman'));
+ return o}
 /* The Upbringing step's "Background skills" line: the household the character grew up in, and where. The family's role goes in brackets, since trade names such as "Soldier: Mercenary/Viking" don't read well inside a sentence. */
 function bgLine(){const o=S.occ,base='The skills you learned growing up';if(!o||!S.cls||!S.place)return base+'.';
  if(S.nation==='tribal')return`${base} among the ${S.place}, where your family were ${o}.`;
@@ -1430,7 +1452,7 @@ function steps(){const I=issues();const bad=i=>(I[i]||[]).length>0;const cur=pha
  $('#steps').innerHTML=`<div class="phases" role="tablist">${PHASES.map(([n,,sh],k)=>{const st=phaseSteps(k),d=st.filter(i=>done(i)&&!bad(i)).length,b=st.filter(bad).length;return`<button type="button" class="phase" role="tab" aria-selected="${k===vp}" data-act="phase" data-val="${k}" aria-label="${n}"><span class="pfull">${n}</span><span class="pshort">${sh}</span> <span class="cnt ${b?'bad':d===st.length?'ok':'warn'}">${d} of ${st.length}${b?' · '+b+' to fix':''}</span></button>`}).join('')}</div>
  <div class="steps">${phaseSteps(vp).map(i=>{const now=S.step===i;const m=bad(i)?'bad':now?'now':done(i)?'done':'';return`<button class="step" data-act="go" data-val="${i}" ${now?'aria-current="step"':''}><span class="mark ${m}" title="${bad(i)?'Needs another look':done(i)?'Complete':'Not finished'}"></span>${STEPS[i]}${bad(i)?'<span class="sr"> (needs another look)</span>':''}</button>`}).join('')}</div>`}
 function sheet(){const c=culture();const o=occ();const t=tongues();const {led,ex}=ledger();const e='<span class="empty">not chosen</span>';
- const id=`<dl>${S.concept?`<dt>Concept</dt><dd>${esc(S.concept)}</dd>`:''}${S.career?`<dt>Career</dt><dd>${careerLine()}</dd>`:''}<dt>Folk</dt><dd>${S.folk}${S.sex?', '+S.sex.toLowerCase():''}${orbP()?', '+orbP():''}</dd><dt>Born</dt><dd>${S.place?(S.nation==='tribal'?'Among the '+S.place:(S.inSet?S.place:'A village near '+S.place)+', '+NAT[S.nation].name):e}</dd>${ivK()?`<dt>Kingdom</dt><dd>${kingLabel(S.place)}</dd>`:''}${S.clan?`<dt>Clan</dt><dd>${esc(S.clan)}${thrall()?' <span class="empty">(owned by, not a member)</span>':''}</dd>`:''}${byOn()&&S.byname?`<dt>Byname</dt><dd>${esc(S.byname)}</dd>`:''}${patroOn()&&S.father?`<dt>Father</dt><dd>${esc(S.father)} <span class="empty">(${esc(patronymic())})</span></dd>`:''}<dt>Society</dt><dd>${c||e}</dd><dt>Class</dt><dd>${S.cls?clsName():e}</dd><dt>Family trade</dt><dd>${S.occ||e}</dd><dt>Upbringing</dt><dd>${S.bg?BG[S.bg].name:e}</dd><dt>Status</dt><dd>${S.cls?statusVal():e}</dd><dt>Coin</dt><dd>${S.cls?coinText():e}</dd></dl>`;
+ const id=`<dl>${S.concept?`<dt>Concept</dt><dd>${esc(S.concept)}</dd>`:''}${S.career?`<dt>Career</dt><dd>${careerLine()}</dd>`:''}<dt>Folk</dt><dd>${S.folk}${S.sex?', '+S.sex.toLowerCase():''}${orbP()?', '+orbP():''}</dd><dt>Born</dt><dd>${S.place?(S.nation==='tribal'?'Among the '+S.place:(S.inSet?S.place:'A village near '+S.place)+', '+NAT[S.nation].name):e}</dd>${ivK()?`<dt>Kingdom</dt><dd>${kingLabel(S.place)}</dd>`:''}${S.clan?`<dt>Clan</dt><dd>${esc(S.clan)}${thrall()?' <span class="empty">(owned by, not a member)</span>':''}</dd>`:''}${byOn()&&S.byname?`<dt>Byname</dt><dd>${esc(S.byname)}</dd>`:''}${patroOn()&&S.father?`<dt>Father</dt><dd>${esc(S.father)} <span class="empty">(${esc(patronymic())})</span></dd>`:''}<dt>Society</dt><dd>${c||e}</dd><dt>Class</dt><dd>${S.cls?clsName():e}</dd><dt>Family trade</dt><dd>${S.occ||e}</dd><dt>Upbringing</dt><dd>${S.bg?BG[S.bg].name:e}</dd><dt>Status</dt><dd>${S.cls?statusVal():e}</dd>${knighted()?`<dt>Knighted</dt><dd>${knightYear()||'Yes'}</dd>`:''}<dt>Coin</dt><dd>${S.cls?coinText():e}</dd></dl>`;
  const lang=`<div class="sec"><h3>Tongues and lore</h3><div class="rows stripe">${t.L.length?t.L.concat(t.W).map(l=>`<div class="row"><span>${l[0]} ${l[2]?`<small>${l[2]}</small>`:''}</span><span>${l[1]}</span></div>`).join(''):e}</div>${S.dual?`<p class="note">${tribalFamily()&&S.nation!=='tribal'?'Tribal family. Expect prejudice in the kingdoms, and little hope of rank above the unguilded.':orbMixed()?'Of both peoples of Orbaal.':'Family from elsewhere. Rank above guildsman is rare.'}</p>`:''}${orbP()==='Jarin'?'<p class="note">Jarin in Orbaal. Rank above guildsman is rare there.</p>':''}</div>`;
  const tl=talentCounts();const A=attrs();
  const atr=`<div class="sec"><h3>Attributes ${atLeft()?`<span class="cnt ${atLeft()<0?'bad':'warn'}">${atLeft()<0?(-atLeft())+' over':atLeft()+' points to spend'}</span>`:''}</h3><div class="rows stripe">${[A.res,A.init,A.tough,A.dt,A.ll,A.inv].map(x=>`<div class="row" title="${atBreak(x)}"><span>${x.name}${x.parts.length>1?` <small>${atBreak(x)}</small>`:''}</span><span>${x.name==='Initiative'?'+':''}${x.val}</span></div>`).join('')}</div></div>`;
@@ -1458,7 +1480,7 @@ const GONE=new Set();let syncing=false;
 function syncList(d){const gone=new Set([...(Array.isArray(d.gone)?d.gone:[]),...GONE]);const open=VIEW==='char'&&CUR;if(open)gone.delete(CUR);CHARS=CHARS.filter(c=>!gone.has(c.id));
  (Array.isArray(d.list)?d.list:[]).forEach(o=>{if(!o||!o.id||!o.S||typeof o.S!=='object'||Array.isArray(o.S)||gone.has(o.id))return;const m=CHARS.find(c=>c.id===o.id);if(!m){CHARS.push(o);return}if((o.saved||0)<=(m.saved||0))return;Object.assign(m,o);if(open&&o.id===CUR){const st=S.step,li=S.lastIn;S=Object.assign(blank(),JSON.parse(JSON.stringify(o.S)));S.step=st;S.lastIn=li}});return gone}
 function store(){if(syncing)return;try{let d=null;try{d=JSON.parse(localStorage.getItem(STOREKEY)||'null')}catch(e){}const gone=d&&d.v===2?syncList(d):new Set(GONE);localStorage.setItem(STOREKEY,JSON.stringify({v:2,list:CHARS,current:CUR,GM,gone:[...gone].slice(-500)}));GONE.clear();saveOK=true;saveFull=false}catch(e){saveOK=false;saveFull=!!e&&(e.name==='QuotaExceededError'||e.code===22||e.name==='NS_ERROR_DOM_QUOTA_REACHED')}}
-function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e){const nm=$('#name').value;if(!e.S||strip(e.S)!==strip(S)||e.name!==nm)e.saved=Date.now();e.name=nm;if(e.copy&&e.name!==e.copy.name)delete e.copy;e.S=JSON.parse(JSON.stringify(S));e.sum=summary()}}
+function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e){const nm=currentName();if(!e.S||strip(e.S)!==strip(S)||e.name!==nm)e.saved=Date.now();e.name=nm;if(e.copy&&e.name!==e.copy.name)delete e.copy;e.S=JSON.parse(JSON.stringify(S));e.sum=summary()}}
  store();const n=$('#savenote');n.textContent=saveOK?'Saved in this browser':saveFull?'Not saved: this browser\'s storage is full. Remove a portrait, or download and delete old characters.':'Not saved: this browser is blocking storage';n.classList.toggle('bad',!saveOK)}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STOREKEY)||'null');if(d&&d.v===2&&Array.isArray(d.list)){CHARS=d.list.filter(c=>c&&c.id&&c.S&&typeof c.S==='object');CUR=CHARS.some(c=>c.id===d.current)?d.current:null;Object.assign(GM,d.GM||{});return}}catch(e){}
  try{const d=JSON.parse(localStorage.getItem(SAVEKEY)||'null');if(d&&d.v===1&&d.S&&typeof d.S==='object'){Object.assign(GM,d.GM||{});const id=newId();CHARS=[{id,name:d.name||'',S:d.S,saved:Date.now(),sum:null}];CUR=id}}catch(e){}}
@@ -1476,7 +1498,7 @@ const IC={dl:ICON('<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d
  copy:ICON('<path d="M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z"/><path d="M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1"/>'),
  del:ICON('<path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>')};
 function startScreen(){const rows=CHARS.slice().sort((a,b)=>b.saved-a.saved).map(c=>{const m=c.sum||{career:'',born:'',done:0};const nm=c.name?esc(c.name):'Unnamed';const no='<span class="empty">Not chosen</span>';
-  return`<tr><td><b>${nm}</b>${c.copy?`<span class="empty">${copyLabel(c)}</span>`:''}</td><td>${m.career||no}</td><td>${m.born||no}</td><td><span class="cnt ${m.done===ORDER.length?'ok':'warn'}">${m.done} of ${ORDER.length} steps</span></td><td>${savedTxt(c.saved)}</td><td class="act">${pendingDel===c.id?`<span class="err">Delete ${nm}?</span><button class="btn" data-act="delyes" data-val="${c.id}">Delete</button><button class="link" data-act="delno">Cancel</button>`:`<button class="btn" data-act="open" data-val="${c.id}">Open</button><button class="ibtn" data-act="dl" data-val="${c.id}" title="Download .md (save file)" aria-label="Download ${nm} as .md, the save file">${IC.dl}MD</button>${pdfOk(c.id)?`<button class="ibtn" data-act="pdf" data-val="${c.id}" title="Download PDF (character sheet)" aria-label="Download ${nm} as PDF, the character sheet" ${pdfBusy?'disabled':''}>${IC.dl}PDF</button>`:`<button class="ibtn" disabled title="${pdfWhy(c.id)}" aria-label="Download ${nm} as PDF. ${pdfWhy(c.id)}">${IC.dl}PDF</button>`}<button class="ibtn" data-act="dup" data-val="${c.id}" title="Duplicate" aria-label="Duplicate ${nm}">${IC.copy}</button><button class="ibtn del" data-act="del" data-val="${c.id}" title="Delete" aria-label="Delete ${nm}">${IC.del}</button>`}</td></tr>`}).join('');
+  return`<tr><td><b>${c.S&&c.S.title?esc(c.S.title)+' ':''}${nm}</b>${c.copy?`<span class="empty">${copyLabel(c)}</span>`:''}</td><td>${m.career||no}</td><td>${m.born||no}</td><td><span class="cnt ${m.done===ORDER.length?'ok':'warn'}">${m.done} of ${ORDER.length} steps</span></td><td>${savedTxt(c.saved)}</td><td class="act">${pendingDel===c.id?`<span class="err">Delete ${nm}?</span><button class="btn" data-act="delyes" data-val="${c.id}">Delete</button><button class="link" data-act="delno">Cancel</button>`:`<button class="btn" data-act="open" data-val="${c.id}">Open</button><button class="ibtn" data-act="dl" data-val="${c.id}" title="Download .md (save file)" aria-label="Download ${nm} as .md, the save file">${IC.dl}MD</button>${pdfOk(c.id)?`<button class="ibtn" data-act="pdf" data-val="${c.id}" title="Download PDF (character sheet)" aria-label="Download ${nm} as PDF, the character sheet" ${pdfBusy?'disabled':''}>${IC.dl}PDF</button>`:`<button class="ibtn" disabled title="${pdfWhy(c.id)}" aria-label="Download ${nm} as PDF. ${pdfWhy(c.id)}">${IC.dl}PDF</button>`}<button class="ibtn" data-act="dup" data-val="${c.id}" title="Duplicate" aria-label="Duplicate ${nm}">${IC.copy}</button><button class="ibtn del" data-act="del" data-val="${c.id}" title="Delete" aria-label="Delete ${nm}">${IC.del}</button>`}</td></tr>`}).join('');
  const fin=finMsg&&CHARS.some(c=>c.id===finMsg.id)?`<div class="notice fin" role="status"><span>${finMsg.todo.length?`<b>${esc(finMsg.name)}</b> is saved, with ${finMsg.todo.length} ${finMsg.todo.length===1?'step':'steps'} unfinished: ${finMsg.todo.join(', ')}.`:`<b>${esc(finMsg.name)}</b> is finished and saved in this browser. Download the file to keep a copy or to send to your GM.`}</span><span class="chips">${finMsg.todo.length?`<button class="btn" data-act="open" data-val="${finMsg.id}">Go back to it</button><button class="btn" data-act="dl" data-val="${finMsg.id}">Download .md anyway</button>${GM.pdfDraft?`<button class="btn" data-act="pdf" data-val="${finMsg.id}" ${pdfBusy?'disabled':''}>Download PDF anyway</button>`:''}`:`<button class="btn primary" data-act="dl" data-val="${finMsg.id}">Download .md</button><button class="btn" data-act="pdf" data-val="${finMsg.id}" ${pdfBusy?'disabled':''}>Download PDF</button>`}</span></div>`:'';
  $('#start').innerHTML=`${fin}<div class="instr"><p>Build a character for The Broken Empires RPG, set in the world of Hârn. The builder takes you through four stages, one step at a time: the basics, family and origin, who your character is, and outfitting. At every step you can choose for yourself or roll the dice, and the builder keeps the rules and totals straight.</p>
  <p>Characters save automatically in this browser, but browser storage can be cleared. To keep a character safe, download its <b>.md file</b>: that's its save file, and you can load it back here on any device with "Load a character file". The <b>PDF</b> is a filled-in character sheet for printing or sharing; it can't be loaded back.</p></div>
@@ -1495,13 +1517,13 @@ const b64=t=>{const u=new TextEncoder().encode(t);let o='';for(let i=0;i<u.lengt
 const fileName=n=>((n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'unnamed-character')+'.md';
 function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();const {led,ex}=ledger();const A=attrs();const G=gearCalc();const t=tongues();
  const val=k=>Math.max(0,Math.min(70,(led[k]||[]).reduce((a,q)=>a+q[0],0)));
- L.push('# '+(name||'Unnamed character'),'');if(formalName())L.push('*'+formalName()+'*','');
+ L.push('# '+(titled(name)||'Unnamed character'),'');if(formalName())L.push('*'+formalName()+'*','');
  L.push([S.career?unesc(careerLine()):'',S.folk+(S.sex?', '+S.sex.toLowerCase():'')+(orbP()?', '+orbP():''),ageSettled()?S.age+', '+ageYears():''].filter(Boolean).join(' · '));
  const place=S.place?(S.nation==='tribal'?'among the '+S.place:(S.inSet?S.place:'a village near '+S.place)+', '+NAT[S.nation].name):'';
  if(S.birth||place)L.push('Born '+[S.birth?S.birth.d+' '+monthName(S.birth.m)+(ageSettled()?' '+yearTxt(birthYear()):'')+' ('+sunsign(S.birth)+')':'',place].filter(Boolean).join(', '));
  if(S.concept)L.push('','> '+S.concept);
  L.push('','## Origin');
- [...(ivK()?[['Kingdom',kingLabel(S.place)]]:[]),...(byOn()&&S.byname?[['Byname',S.byname]]:[]),['Clan',S.clan+(S.clan&&thrall()?' (owned by, not a member)':'')],...(patroOn()&&S.father?[['Father',S.father+' ('+patronymic()+')']]:[]),['Society',c],['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?statusVal():''],['Coin',S.cls?unesc(coinText()):''],
+ [...(ivK()?[['Kingdom',kingLabel(S.place)]]:[]),...(byOn()&&S.byname?[['Byname',S.byname]]:[]),['Clan',S.clan+(S.clan&&thrall()?' (owned by, not a member)':'')],...(patroOn()&&S.father?[['Father',S.father+' ('+patronymic()+')']]:[]),['Society',c],['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?statusVal():''],['Knighted',knighted()?unesc(knightYear())||'Yes':''],['Coin',S.cls?unesc(coinText()):''],
   ['Family',[S.sibs?(S.sibs.n===1?'Only child':ord(S.sibs.rank)+' of '+S.sibs.n):'',S.parent,S.standing?S.standing+' in the clan':''].filter(Boolean).join(' · ')],['Travelled',S.travel?unesc(travelOut().label):''],['People',S.allies?(allyList().join(' · ')||'None'):'']].forEach(([k,v])=>L.push('- **'+k+':** '+(v===''||v===null||v===undefined?nc:v)));
  L.push('','## Appearance');{const lr=lookRows();if(lr.length)lr.forEach(([k,v])=>L.push('- **'+k+':** '+v));else L.push(nc)}
  L.push('','## Attributes','| Max Resolve | Initiative | Toughness | Death Threshold | Lethality Level | Inventory slots |','|---|---|---|---|---|---|','| '+[A.res.val,'+'+A.init.val,A.tough.val,A.dt.val,A.ll.val,A.inv.val].join(' | ')+' |');
@@ -1527,7 +1549,7 @@ function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();con
  const data=b64(JSON.stringify({v:1,name:name||'',S,camp:{d:GM.d,m:GM.m,y:GM.y}})).replace(/(.{76})/g,'$1\n');
  L.push('<!-- broken-harn-data v1','This block lets Broken Hârn: Character Builder open this file again. Leave it as it is.',data,'-->','');
  return L.join('\n')}
-function mdFor(id){if(VIEW==='char'&&id===CUR)return{name:$('#name').value,md:charMd($('#name').value)};const e=CHARS.find(c=>c.id===id);if(!e)return null;const keep=S;try{S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));return{name:e.name,md:charMd(e.name)}}finally{S=keep}}
+function mdFor(id){if(VIEW==='char'&&id===CUR)return{name:currentName(),md:charMd(currentName())};const e=CHARS.find(c=>c.id===id);if(!e)return null;const keep=S;try{S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));return{name:e.name,md:charMd(e.name)}}finally{S=keep}}
 let DL=null;try{if(window.claude&&window.claude.use)window.claude.use('downloads').then(d=>{DL=d}).catch(()=>{})}catch(e){}
 function download(id){const r=mdFor(id);if(!r)return;const fn=fileName(r.name);const say=m=>{if(VIEW==='start'){listNote=m;const n=$('#listnote');if(n)n.textContent=m;return}const n=$('#dlnote');if(n)n.textContent=m};
  if(DL){DL.save({filename:fn,data:r.md}).then(()=>say('Downloaded '+fn)).catch(e=>{if(!e||e.code!=='declined')say('The download did not go through. Try again.')});return}
@@ -1551,7 +1573,7 @@ const PDFPEN={Athletics:'athletics','Rise from Prone':'rise_from_prone',Stealth:
 // Works out what goes in each field of the TBE sheet. Text in V, ticked boxes in B, "S"/"T" button captions in CAP, overflow lines in N.
 function pdfData(name){const V={},B=[],CAP={},N=[];const c=culture();const {led,ex}=ledger();const A=attrs();const G=gearCalc();const t=tongues();
  const set=(k,v)=>{if(v!==''&&v!==null&&v!==undefined)V[k]=String(v)};const tot=k=>(led[k]||[]).reduce((a,q)=>a+q[0],0);
- set('name',name);set('page2_name',name);set('race',S.folk);set('sex',S.sex);if(ageSettled())set('age',ageYears());
+ set('name',titled(name));set('page2_name',titled(name));set('race',S.folk);set('sex',S.sex);if(ageSettled())set('age',ageYears());
  if(ivK())set('culture',kingBase(ivK())+' ('+(c==='Khuzan'?'Khuzan':'Ivinian')+')');else if(S.nation)set('culture',(S.nation==='tribal'?(S.place||'Tribal'):NAT[S.nation].name)+(c&&c!==NAT[S.nation].name?' ('+c+')':''));
  if(S.career){const cl=unesc(careerLine());set('previous_career',cl.length<=34?cl:S.career==='Spellweaver'?'Spellweaver'+(S.occ2?' ('+S.occ2+')':''):S.career==='Godbound'&&S.deity?'Godbound of '+S.deity:S.career)}
  S.abil.slice(0,3).forEach((a,i)=>set('ability_score_descriptor_'+(i+1),a.name+(a.desc?' ('+a.desc+')':'')));
@@ -1589,7 +1611,7 @@ function page3Data(){const c=culture();const t=tongues();const R=[];const has=v=
  sec('Origin',[['Formal name',formalName()],['Folk',S.folk+(S.sex?', '+S.sex.toLowerCase():'')+(orbP()?', '+orbP():'')],['Born',place],['Kingdom',ivK()?kingLabel(S.place):''],['Society',c],
   ['Clan',S.clan?S.clan+(thrall()?' (owned by, not a member)':''):''],['Father',patroOn()&&S.father?S.father+' ('+patronymic()+')':''],['Byname',byOn()&&S.byname&&!S.nameHand?S.byname:'']]);
  sec('Appearance',lookRows());
- sec('Station and upbringing',[['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?String(statusVal()):'']]);
+ sec('Station and upbringing',[['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?String(statusVal()):''],['Knighted',knighted()?unesc(knightYear())||'Yes':'']]);
  const sg=activeSign(),k=sg?SIGNSK[sg]:[],af=signAff(),ss=S.birth?sunsign(S.birth):'';
  sec('Birth and sunsign',[['Born on',S.birth?S.birth.d+' '+monthName(S.birth.m)+(ageSettled()?' '+unesc(yearTxt(birthYear())):''):''],['Age',ageSettled()?S.age+', '+ageYears():''],
   ['Sunsign',ss?ss+(sg&&sg!==ss?', taking '+sg:''):''],['Its gifts',sg?'+10 '+k[0]+', +5 '+k[1]+' and '+k[2]:''],['Affinity',af?af[0].join(' and ')+' (+1 Mastery)':''],['Impedance',af?af[1].join(' and ')+' (+1 TC)':'']]);
@@ -1652,7 +1674,7 @@ const pdfWhy=id=>'PDF available when finished';
 let pdfBusy=false,listNote='';
 function pdfGate(){const b=$('#pdfbtn'),g=$('#pdfgate');if(!b)return;const ok=pdfOk(CUR);b.disabled=pdfBusy||!ok;if(g)g.textContent=ok?'':pdfWhy(CUR)}
 async function downloadPdf(id){const fromList=VIEW==='start';id=id||CUR;const e=CHARS.find(c=>c.id===id);if(fromList&&!e)return;if(pdfBusy||!pdfOk(id))return;
- const nm=fromList?(e.name||''):$('#name').value;const fn=fileName(nm).replace(/\.md$/,'.pdf');
+ const nm=fromList?(e.name||''):currentName();const fn=fileName(nm).replace(/\.md$/,'.pdf');
  const say=m=>{if(fromList){listNote=m;const n=$('#listnote');if(n)n.textContent=m}else{const n=$('#dlnote');if(n)n.textContent=m}};
  const btn=fromList?null:$('#pdfbtn');pdfBusy=true;if(btn)btn.disabled=true;if(fromList)render();say('Preparing PDF…');
  const keep=S;let r;try{if(fromList)S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));r=await makePdf(nm)}catch(err){r=null}finally{if(fromList)S=keep}
@@ -1682,7 +1704,7 @@ const TABKEY='broken-harn:tab';
 function tabMemo(){try{sessionStorage.setItem(TABKEY,JSON.stringify({view:VIEW,cur:CUR}))}catch(e){}}
 function render(){syncGM();tabMemo();const st=VIEW==='start';$('#start').hidden=!st;$('#steps').hidden=st;$('#cols').hidden=st;$('#lnk-chars').hidden=st;document.querySelector('.banner').classList.toggle('inchar',!st);
  if(st){$('#sect').textContent='Characters';store();startScreen();return}
- ageSettled();(S.lastIn||(S.lastIn={}))[phaseOf(S.step)]=S.step;$('#sect').textContent=STEPS[S.step];steps();panel();sheet();$('#name').value=currentName();showFormal();showPortrait();saveNow();pdfGate()}
+ ageSettled();(S.lastIn||(S.lastIn={}))[phaseOf(S.step)]=S.step;$('#sect').textContent=STEPS[S.step];steps();panel();sheet();$('#name').value=titled(currentName());showFormal();showPortrait();saveNow();pdfGate()}
 
 /* ---------- events ---------- */
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.val;
@@ -1702,6 +1724,7 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
  else{
   if(a.startsWith('lk'))lookAct(a,v);
   else if(a==='go')goStep(+v);
+  else if(a==='title')S.title=(S.title||'')===v?'':v;
   else if(a==='b30'){const[c,x]=v.split('|');S.b30[c]=S.b30[c]===x?'':x}
   else if(a==='career'){const nv=S.career===v?'':v;if(nv!==S.career){S.occ2='';S.swPath='';S.chantry=''}S.career=nv}
   else if(a==='role')S.role=v;
@@ -1771,6 +1794,8 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.adesc!==undefined){S.abil[+el.dataset.adesc].desc=el.value.trim();render();return}
  if(el.dataset.patro){S.patro=el.checked;render();return}
  if(el.dataset.given){S.given=el.value.trim();render();return}
+ if(el.dataset.title!==undefined){S.title=el.value.trim();render();return}
+ if(el.dataset.knight){S.knighted=el.checked;render();return}
  if(el.dataset.nhand){S.nameHand=el.checked;if(el.checked&&!S.handName)S.handName=everyday();render();return}
  if(el.dataset.handname){S.handName=el.value.trim();render();return}
  if(el.dataset.prompt){const k=el.dataset.prompt;const gen=k==='pos'?promptText():negText();if(!S.prompt)S.prompt={pos:'',neg:''};S.prompt[k]=el.value.trim()===gen.trim()?'':el.value.trim();saveNow();const n=$('#promptnote');if(n)n.textContent=S.prompt.pos||S.prompt.neg?'Your edit is kept. Rebuild from character to start again from the character.':'';return}
