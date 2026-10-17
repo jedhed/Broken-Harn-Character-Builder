@@ -1404,7 +1404,11 @@ const newId=()=>'c'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toStri
 const strip=o=>JSON.stringify({...o,step:0});
 const summary=()=>({career:S.career?careerLine():'',born:S.place?(S.nation==='tribal'?'Among the '+esc(S.place):esc(S.place)+', '+NAT[S.nation].name):'',done:ORDER.filter(i=>done(i)&&!(issues()[i]||[]).length).length});
 let saveFull=false;
-function store(){try{localStorage.setItem(STOREKEY,JSON.stringify({v:2,list:CHARS,current:CUR,GM}));saveOK=true;saveFull=false}catch(e){saveOK=false;saveFull=!!e&&(e.name==='QuotaExceededError'||e.code===22||e.name==='NS_ERROR_DOM_QUOTA_REACHED')}}
+/* Several tabs can be open on the app at once. Before each save, characters saved by another tab are merged in (the newer copy of each wins) and characters deleted in another tab are dropped, so one tab never wipes out another's work. Other tabs pick up each save as it happens. */
+const GONE=new Set();let syncing=false;
+function syncList(d){const gone=new Set([...(Array.isArray(d.gone)?d.gone:[]),...GONE]);const open=VIEW==='char'&&CUR;if(open)gone.delete(CUR);CHARS=CHARS.filter(c=>!gone.has(c.id));
+ (Array.isArray(d.list)?d.list:[]).forEach(o=>{if(!o||!o.id||!o.S||typeof o.S!=='object'||Array.isArray(o.S)||gone.has(o.id))return;const m=CHARS.find(c=>c.id===o.id);if(!m){CHARS.push(o);return}if((o.saved||0)<=(m.saved||0))return;Object.assign(m,o);if(open&&o.id===CUR){const st=S.step;S=Object.assign(blank(),JSON.parse(JSON.stringify(o.S)));S.step=st}});return gone}
+function store(){if(syncing)return;try{let d=null;try{d=JSON.parse(localStorage.getItem(STOREKEY)||'null')}catch(e){}const gone=d&&d.v===2?syncList(d):new Set(GONE);localStorage.setItem(STOREKEY,JSON.stringify({v:2,list:CHARS,current:CUR,GM,gone:[...gone].slice(-500)}));GONE.clear();saveOK=true;saveFull=false}catch(e){saveOK=false;saveFull=!!e&&(e.name==='QuotaExceededError'||e.code===22||e.name==='NS_ERROR_DOM_QUOTA_REACHED')}}
 function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e){const nm=$('#name').value;if(!e.S||strip(e.S)!==strip(S)||e.name!==nm)e.saved=Date.now();e.name=nm;e.S=JSON.parse(JSON.stringify(S));e.sum=summary()}}
  store();const n=$('#savenote');n.textContent=saveOK?'Saved in this browser':saveFull?'Not saved: this browser\'s storage is full. Remove a portrait, or download and delete old characters.':'Not saved: this browser is blocking storage';n.classList.toggle('bad',!saveOK)}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STOREKEY)||'null');if(d&&d.v===2&&Array.isArray(d.list)){CHARS=d.list.filter(c=>c&&c.id&&c.S&&typeof c.S==='object');CUR=CHARS.some(c=>c.id===d.current)?d.current:null;Object.assign(GM,d.GM||{});return}}catch(e){}
@@ -1621,7 +1625,7 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
  if(a==='open'){finMsg=null;openChar(v);render();window.scrollTo(0,0);return}
  if(a==='del'){pendingDel=v;render();return}
  if(a==='delno'){pendingDel=null;render();return}
- if(a==='delyes'){CHARS=CHARS.filter(c=>c.id!==v);if(CUR===v)CUR=null;pendingDel=null;render();return}
+ if(a==='delyes'){GONE.add(v);CHARS=CHARS.filter(c=>c.id!==v);if(CUR===v)CUR=null;pendingDel=null;render();return}
  if(a==='phase')viewPhase=+v;
  else{
   if(a.startsWith('lk'))lookAct(a,v);
@@ -1719,6 +1723,7 @@ document.addEventListener('change',ev=>{const el=ev.target;
  const k=el.dataset.set;if(!k)return;S[k]=el.value;if(k==='place')S.inSet=false;if(k==='deity'&&S.role!=='lay'&&!(FAITH[S.deity]||{})[S.role])S.role='lay';render()});
 
 loadSaved();if(!(CUR&&openChar(CUR)))VIEW='start';render();
+window.addEventListener('storage',ev=>{if(ev.key!==STOREKEY||!ev.newValue)return;let d;try{d=JSON.parse(ev.newValue)}catch(e){return}if(!d||d.v!==2)return;Object.assign(GM,d.GM||{});syncList(d);syncing=true;try{render()}finally{syncing=false}});
 $('#name').addEventListener('click',()=>{if(VIEW==='char'){S.step=NAMESTEP;viewPhase=null;render();window.scrollTo(0,0)}});
 $('#filein').addEventListener('change',ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;if(f.size>2e6){loadMsg=[false,'That file is too large to be a character file.'];render();return}const r=new FileReader();r.onload=()=>importChar(String(r.result));r.onerror=()=>{loadMsg=[false,'That file could not be read.'];render()};r.readAsText(f)});
 document.addEventListener('input',ev=>{if(ev.target.id==='lk_feat'){const n=ev.target.value.length,c=$('#featcnt');if(c)c.textContent=n>=160?n+' of 200':'';return}if(ev.target.id==='years'){$('#yearsOut').textContent=ev.target.value;$('#bornOut').innerHTML=bornLine(+ev.target.value);return}if(!['gwant','gblock','gdo'].includes(ev.target.id))return;const t=goalText(),el=$('#gprev');el.hidden=!t;el.innerHTML=t?'<b>Your goal will read</b>'+esc(t):''});
