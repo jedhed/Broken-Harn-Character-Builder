@@ -262,7 +262,7 @@ td b{font:700 17.5px var(--head)}
         <div id="formal" class="formal" hidden></div>
         <div id="portwrap" class="portwrap side" hidden><img id="portimg" alt="Character portrait"></div>
         <div id="savenote" class="savenote" role="status"></div>
-        <div class="dlrow"><button class="btn" type="button" data-act="dl">Download .md</button><button class="btn" type="button" id="pdfbtn" data-act="pdf">Download PDF</button><span id="pdfgate" class="hint"></span><span id="dlnote" class="hint" role="status"></span></div>
+        <div class="dlrow"><button class="btn" type="button" data-act="dl">Download .md</button><button class="btn" type="button" id="pdfbtn" data-act="pdf">Download PDF</button><button class="btn" type="button" data-act="dup">Duplicate</button><span id="pdfgate" class="hint"></span><span id="dlnote" class="hint" role="status"></span></div>
       </div>
       <div id="sheet" style="display:flex;flex-direction:column;gap:14px"></div>
     </aside>
@@ -282,7 +282,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-4';
+const APPVER='2026.10.17-5';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1289,7 +1289,7 @@ function rollAll0(){const st=S.step;S=blank();S.step=st;const folks=['Human'];S.
  if(S.bg==='wanderer')S.lang40='Jarin';S.age=['Young','Adult','Adult','Old'][rnd(4)-1];R.years();R.birth();R.sibs();R.parent();R.standing();R.travel();R.allies();R.abil();R.abilRest();LIFET.forEach(([t])=>{R.life(t);const o=optionsFor(lifeEv(t));S.life[t].pick=o[rnd(o.length)-1]});R.careerAll();R.roAll();R.atAll();R.gearAll();rollLook('');{const k=Object.keys(TRAITS).concat(signWords());const n=1+rnd(2);while(S.traits.length<n){const t=k[rnd(k.length)-1];if(!S.traits.includes(t))S.traits.push(t)}}}
 /* ---------- render ---------- */
 /* Skill level from the rulebook's Skill Competency table, shown as a coloured dot before a skill's name. Skills here stop at 70, so Expert and Master never show. */
-const LV=[[60,'r','Reliable','60–79'],[40,'p','Proficient','40–59'],[20,'n','Novice','20–39'],[0,'g','Green','1–19']];
+const LV=[[60,'r','Reliable','60%+'],[40,'p','Proficient','40–59%'],[20,'n','Novice','20–39%'],[0,'g','Green','1–19%']];
 const lvDot=v=>{const[,c,n,r]=LV.find(l=>v>=l[0]);return`<span class="lv lv-${c}" role="img" aria-label="${n}" title="${n} (${r})"></span>`};
 const LVKEY=`<p class="lvkey hint">${LV.slice(0,3).reverse().map(([,c,n,r])=>`<span><span class="lv lv-${c}"></span>${n} ${r}</span>`).join('')}</p>`;
 const cLeft=(n,t,word='left')=>`<span class="cnt ${n<0?'bad':n===0?'ok':'warn'}">${n<0?(-n)+' over':n+' of '+t+' '+word}</span>`;
@@ -1448,15 +1448,20 @@ const GONE=new Set();let syncing=false;
 function syncList(d){const gone=new Set([...(Array.isArray(d.gone)?d.gone:[]),...GONE]);const open=VIEW==='char'&&CUR;if(open)gone.delete(CUR);CHARS=CHARS.filter(c=>!gone.has(c.id));
  (Array.isArray(d.list)?d.list:[]).forEach(o=>{if(!o||!o.id||!o.S||typeof o.S!=='object'||Array.isArray(o.S)||gone.has(o.id))return;const m=CHARS.find(c=>c.id===o.id);if(!m){CHARS.push(o);return}if((o.saved||0)<=(m.saved||0))return;Object.assign(m,o);if(open&&o.id===CUR){const st=S.step,li=S.lastIn;S=Object.assign(blank(),JSON.parse(JSON.stringify(o.S)));S.step=st;S.lastIn=li}});return gone}
 function store(){if(syncing)return;try{let d=null;try{d=JSON.parse(localStorage.getItem(STOREKEY)||'null')}catch(e){}const gone=d&&d.v===2?syncList(d):new Set(GONE);localStorage.setItem(STOREKEY,JSON.stringify({v:2,list:CHARS,current:CUR,GM,gone:[...gone].slice(-500)}));GONE.clear();saveOK=true;saveFull=false}catch(e){saveOK=false;saveFull=!!e&&(e.name==='QuotaExceededError'||e.code===22||e.name==='NS_ERROR_DOM_QUOTA_REACHED')}}
-function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e){const nm=$('#name').value;if(!e.S||strip(e.S)!==strip(S)||e.name!==nm)e.saved=Date.now();e.name=nm;e.S=JSON.parse(JSON.stringify(S));e.sum=summary()}}
+function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e){const nm=$('#name').value;if(!e.S||strip(e.S)!==strip(S)||e.name!==nm)e.saved=Date.now();e.name=nm;if(e.copy&&e.name!==e.copy.name)delete e.copy;e.S=JSON.parse(JSON.stringify(S));e.sum=summary()}}
  store();const n=$('#savenote');n.textContent=saveOK?'Saved in this browser':saveFull?'Not saved: this browser\'s storage is full. Remove a portrait, or download and delete old characters.':'Not saved: this browser is blocking storage';n.classList.toggle('bad',!saveOK)}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STOREKEY)||'null');if(d&&d.v===2&&Array.isArray(d.list)){CHARS=d.list.filter(c=>c&&c.id&&c.S&&typeof c.S==='object');CUR=CHARS.some(c=>c.id===d.current)?d.current:null;Object.assign(GM,d.GM||{});return}}catch(e){}
  try{const d=JSON.parse(localStorage.getItem(SAVEKEY)||'null');if(d&&d.v===1&&d.S&&typeof d.S==='object'){Object.assign(GM,d.GM||{});const id=newId();CHARS=[{id,name:d.name||'',S:d.S,saved:Date.now(),sum:null}];CUR=id}}catch(e){}}
 function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));if(!('orbLang' in e.S))S.orbLang='Ivinian';if(!S.nameV)migrateName(e.name);fixSw();$('#name').value=currentName();CUR=id;VIEW='char';viewPhase=null;pendingDel=null;return true}
 function addChar(roll){S=blank();S.step=ORDER[0];if(roll)rollAll();const id=newId();S.nameV=2;const nm=roll&&canName()?fullName():'';CHARS.unshift({id,name:nm,S:JSON.parse(JSON.stringify(S)),saved:Date.now(),sum:null});$('#name').value=nm;CUR=id;VIEW='char';viewPhase=null;pendingDel=null}
+/* Duplicate a character, portrait and all. The list shows "(copy)" after the copy's name until it is renamed; the label never reaches the sheet or the files. If storage is full the copy is dropped and dupMsg says why. */
+let dupMsg=null;
+const copyLabel=c=>c.copy?(c.copy.n>1?' (copy '+c.copy.n+')':' (copy)'):'';
+function dupChar(id){dupMsg=null;if(VIEW==='char'&&id===CUR)saveNow();const e=CHARS.find(c=>c.id===id);if(!e)return null;const c=JSON.parse(JSON.stringify(e));c.id=newId();c.saved=Date.now();c.copy={name:e.name,n:CHARS.filter(x=>x.copy&&x.copy.name===e.name).length+1};CHARS.unshift(c);store();
+ if(saveFull){CHARS=CHARS.filter(x=>x!==c);store();dupMsg='Not copied: this browser\'s storage is full. Remove a portrait, or download and delete old characters.';return null}return c.id}
 function savedTxt(ts){const d0=x=>{const d=new Date(x);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()};const n=Math.round((d0(Date.now())-d0(ts))/864e5);return n<=0?'Today':n===1?'Yesterday':n<7?n+' days ago':new Date(ts).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
 function startScreen(){const rows=CHARS.slice().sort((a,b)=>b.saved-a.saved).map(c=>{const m=c.sum||{career:'',born:'',done:0};const nm=c.name?esc(c.name):'Unnamed';const no='<span class="empty">Not chosen</span>';
-  return`<tr><td><b>${nm}</b></td><td>${m.career||no}</td><td>${m.born||no}</td><td><span class="cnt ${m.done===ORDER.length?'ok':'warn'}">${m.done} of ${ORDER.length} steps</span></td><td>${savedTxt(c.saved)}</td><td class="act">${pendingDel===c.id?`<span class="err">Delete ${nm}?</span><button class="btn" data-act="delyes" data-val="${c.id}">Delete</button><button class="link" data-act="delno">Cancel</button>`:`<button class="btn" data-act="open" data-val="${c.id}">Open</button><button class="link" data-act="dl" data-val="${c.id}" aria-label="Download ${nm} as .md">Download .md</button>${pdfOk(c.id)?`<button class="link" data-act="pdf" data-val="${c.id}" aria-label="Download ${nm} as PDF" ${pdfBusy?'disabled':''}>Download PDF</button>`:`<button class="link" disabled title="${pdfWhy(c.id)}" aria-label="Download ${nm} as PDF. ${pdfWhy(c.id)}">Download PDF</button>`}<button class="link" data-act="del" data-val="${c.id}" aria-label="Delete ${nm}">Delete</button>`}</td></tr>`}).join('');
+  return`<tr><td><b>${nm}</b>${c.copy?`<span class="empty">${copyLabel(c)}</span>`:''}</td><td>${m.career||no}</td><td>${m.born||no}</td><td><span class="cnt ${m.done===ORDER.length?'ok':'warn'}">${m.done} of ${ORDER.length} steps</span></td><td>${savedTxt(c.saved)}</td><td class="act">${pendingDel===c.id?`<span class="err">Delete ${nm}?</span><button class="btn" data-act="delyes" data-val="${c.id}">Delete</button><button class="link" data-act="delno">Cancel</button>`:`<button class="btn" data-act="open" data-val="${c.id}">Open</button><button class="link" data-act="dl" data-val="${c.id}" aria-label="Download ${nm} as .md">Download .md</button>${pdfOk(c.id)?`<button class="link" data-act="pdf" data-val="${c.id}" aria-label="Download ${nm} as PDF" ${pdfBusy?'disabled':''}>Download PDF</button>`:`<button class="link" disabled title="${pdfWhy(c.id)}" aria-label="Download ${nm} as PDF. ${pdfWhy(c.id)}">Download PDF</button>`}<button class="link" data-act="dup" data-val="${c.id}" aria-label="Duplicate ${nm}">Duplicate</button><button class="link" data-act="del" data-val="${c.id}" aria-label="Delete ${nm}">Delete</button>`}</td></tr>`}).join('');
  const fin=finMsg&&CHARS.some(c=>c.id===finMsg.id)?`<div class="notice fin" role="status"><span>${finMsg.todo.length?`<b>${esc(finMsg.name)}</b> is saved, with ${finMsg.todo.length} ${finMsg.todo.length===1?'step':'steps'} unfinished: ${finMsg.todo.join(', ')}.`:`<b>${esc(finMsg.name)}</b> is finished and saved in this browser. Download the file to keep a copy or to send to your GM.`}</span><span class="chips">${finMsg.todo.length?`<button class="btn" data-act="open" data-val="${finMsg.id}">Go back to it</button><button class="btn" data-act="dl" data-val="${finMsg.id}">Download .md anyway</button>${GM.pdfDraft?`<button class="btn" data-act="pdf" data-val="${finMsg.id}" ${pdfBusy?'disabled':''}>Download PDF anyway</button>`:''}`:`<button class="btn primary" data-act="dl" data-val="${finMsg.id}">Download .md</button><button class="btn" data-act="pdf" data-val="${finMsg.id}" ${pdfBusy?'disabled':''}>Download PDF</button>`}</span></div>`:'';
  $('#start').innerHTML=`${fin}<p class="instr">Make a character for the Broken Empires rules, set on Hârn. Work through origin, career and gear one step at a time, choosing or rolling at every point. Your work is saved in this browser, and you can download any character as a file.</p>
  <div class="field"><div class="lab"><b>Begin</b></div><div class="begin">
@@ -1464,7 +1469,7 @@ function startScreen(){const rows=CHARS.slice().sort((a,b)=>b.saved-a.saved).map
   <div class="bcard"><h3>Roll a whole origin</h3><span>Let the dice fill every step, then change what you like.</span><button class="btn roll" data-act="rollchar">Roll a whole origin</button></div>
   <div class="bcard"><h3>Load a character file</h3><span>Open a .md file you downloaded earlier.</span><button class="btn" data-act="pickfile">Choose a file</button>${loadMsg?`<span class="${loadMsg[0]?'hint':'err'}" role="status">${esc(loadMsg[1])}</span>`:''}</div>
  </div></div>
- <div class="field"><div class="lab"><b>Your characters</b></div>${CHARS.length?`<div class="scroll"><table><thead><tr><th>Name</th><th>Career</th><th>Born</th><th>Progress</th><th>Saved</th><th></th></tr></thead><tbody>${rows}</tbody></table></div><div id="listnote" class="hint" role="status">${esc(listNote)}</div>`:'<div class="result">No characters yet. Begin one above.</div>'}
+ <div class="field"><div class="lab"><b>Your characters</b>${dupMsg?`<span class="err" role="status">${esc(dupMsg)}</span>`:''}</div>${CHARS.length?`<div class="scroll"><table><thead><tr><th>Name</th><th>Career</th><th>Born</th><th>Progress</th><th>Saved</th><th></th></tr></thead><tbody>${rows}</tbody></table></div><div id="listnote" class="hint" role="status">${esc(listNote)}</div>`:'<div class="result">No characters yet. Begin one above.</div>'}
  ${saveOK===false?'<div class="warnbox">This browser is blocking storage, so characters will not be kept after you close the page.</div>':''}</div>`}
 
 /* ---------- download as Markdown ---------- */
@@ -1667,12 +1672,13 @@ function render(){syncGM();tabMemo();const st=VIEW==='start';$('#start').hidden=
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.val;
  if(pdfBusy&&VIEW==='start')return;
  if(a==='dl'){download(v||CUR);return}
+ if(a==='dup'){const fromChar=VIEW==='char',id=dupChar(v||CUR);if(id&&fromChar){openChar(id);window.scrollTo(0,0)}render();if(!id&&fromChar&&dupMsg){const n=$('#savenote');n.textContent=dupMsg;n.classList.add('bad')}return}
  if(a==='pdf'){downloadPdf(v);return}
  if(a==='pickfile'){const f=$('#filein');f.value='';f.click();return}
  if(a==='finish'){const I=issues();saveNow();finMsg={id:CUR,name:$('#name').value.trim()||'Your character',todo:ORDER.filter(i=>!done(i)||(I[i]||[]).length).map(i=>STEPS[i])};VIEW='start';pendingDel=null;loadMsg=null;render();window.scrollTo(0,0);return}
  if(a==='chars'){finMsg=null;VIEW='start';pendingDel=null;loadMsg=null;render();window.scrollTo(0,0);return}
  if(a==='newchar'||a==='rollchar'){finMsg=null;addChar(a==='rollchar');render();window.scrollTo(0,0);return}
- if(a==='open'){finMsg=null;openChar(v);render();window.scrollTo(0,0);return}
+ if(a==='open'){finMsg=null;dupMsg=null;openChar(v);render();window.scrollTo(0,0);return}
  if(a==='del'){pendingDel=v;render();return}
  if(a==='delno'){pendingDel=null;render();return}
  if(a==='delyes'){GONE.add(v);CHARS=CHARS.filter(c=>c.id!==v);if(CUR===v)CUR=null;pendingDel=null;render();return}
