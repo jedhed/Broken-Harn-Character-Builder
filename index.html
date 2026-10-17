@@ -1104,7 +1104,7 @@ function showFormal(){const f=$('#formal');if(!f)return;const t=formalName();f.t
 function setFather(v){S.father=v}
 
 /* ---------- state ---------- */
-const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},promptArms:true,promptClothOn:false,promptCloth:'',look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
+const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},promptArms:true,promptClothOn:false,promptCloth:'',look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,freeOnly:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
 let S=blank();
 const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true,pdfDraft:false};
 const AGE_R={Young:[20,29],Adult:[30,49],Old:[50,69]};
@@ -1120,6 +1120,10 @@ const bornLine=yrs=>S.birth?'Born '+S.birth.d+' '+monthName(S.birth.m)+', '+year
 function culture(){const n=NAT[S.nation];if(!n)return'';if(S.folk==='Sindarin'&&n.id==='evael')return'Sindarin';if(S.folk==='Khuzdul'&&(n.id==='azadmere'||n.id==='ivinia'))return'Khuzan';return n.human}
 function env(){if(!S.nation)return'';if(S.nation==='tribal')return'Wilderness';return S.inSet&&CITIES.includes(S.place)?'City':'Rural'}
 function classW(){const c=culture();if(!c)return{};if(ivClan())return{slave:14,guilded:16,unguilded:70,noble:0};const w={...CLASSW[c]};if(c==='Feudal'&&S.nation!=='rethem'){w.serf+=w.slave;delete w.slave}if(orbP()==='Jarin')delete w.noble;return w}
+/* "Exclude unfree results" (ticked by default): rolling the parents' class leaves out slave and serf (and thrall in Ivinia). The HârnMaster odds are kept for the rest. */
+const UNFREE=['slave','serf'];
+function rollW(){const w=classW();if(!S.freeOnly)return w;const o={};for(const k in w)if(!UNFREE.includes(k))o[k]=w[k];return Object.keys(o).length?o:w}
+const ivcW=()=>Object.entries(IVC).filter(([k])=>!(S.freeOnly&&k==='thrall'));
 function occList(){const c=culture();if(!c||!S.cls)return[];if(ivClan()){if(!S.ivc)return[];const col={thrall:0,great:0,minor:1,ind:2}[S.ivc];return IVOCC.map(o=>({name:o[0],urban:o[1],w:o[2][col]})).filter(o=>o.w>0)}const col=S.cls==='serf'?2:CI[c];return OCC[S.cls].map(o=>({name:o[0],urban:o[1],w:o[2][col]})).filter(o=>o.w>0)}
 function occ(){return occList().find(o=>o.name===S.occ)}
 function suggestBg(){const c=culture();if(!c)return'';if(c==='Tribal')return'barbarian';const o=occ();return env()==='City'||(o&&o.urban>=50)?'urban':'rural'}
@@ -1216,14 +1220,14 @@ const noDup=l=>{const have=talentCounts();const o=l.filter(t=>t==='Combat Awaren
 const R={
  nation(){const pool=NATIONS.filter(n=>n.w>0);S.nation=pickW(pool).id;R.place();if(S.nation==='orbaal')R.people()},
  place(){const n=NAT[S.nation];S.place=pickW(n.places).name;S.inSet=rnd(100)<=10},
- people(){const w={noble:100,guilded:55,unguilded:55,serf:5,slave:10}[S.cls];S.people=rnd(100)<=(w===undefined?25:w)?'Ivinian':'Jarin'},
+ people(){/* chance in 1000 that a rolled Orbaal character of this class is Ivinian; very few Ivinians are serfs or slaves (about 1 in 20 rolled Ivinians) */const w={noble:1000,guilded:550,unguilded:550,serf:7,slave:7}[S.cls];S.people=rnd(1000)<=(w===undefined?250:w)?'Ivinian':'Jarin'},
  clan(){rollClan()},
  swPath(){rollSwPath()},
  chantry(){rollChantry()},
  given(){const s=nameSet();S.given=rollPart(s.given,s.cult)},
  father(){setFather((()=>{const s=nameSet(true);return rollPart(s.given,s.cult)})())},
  years(){const[lo,hi]=AGE_R[S.age];S.years=lo+rnd(hi-lo+1)-1;S.ageSet=true},
- cls(){if(ivClan()){const k=pickW(Object.entries(IVC).map(([name,v])=>({name,w:v.w}))).name;setIvc(k,k==='great'&&rnd(100)<=3);R.occ();return}const w=classW();S.cls=pickW(Object.entries(w).map(([name,w])=>({name,w}))).name;R.occ()},
+ cls(){if(ivClan()){const k=pickW(ivcW().map(([name,v])=>({name,w:v.w}))).name;setIvc(k,k==='great'&&rnd(100)<=3);R.occ();return}const w=rollW();S.cls=pickW(Object.entries(w).map(([name,w])=>({name,w}))).name;R.occ()},
  occ(){const l=occList();S.occ=l.length?pickW(l).name:''},
  picks(){const b=BG[S.bg];S.picks={};if(!b)return;b.slots.forEach(sl=>{const o=slotOpts(sl).slice();const p=[];while(p.length<sl.n&&o.length)p.push(o.splice(rnd(o.length)-1,1)[0]);S.picks[sl.id]=p})},
  b30(){Object.entries(CAT).forEach(([c,l])=>S.b30[c]=l[rnd(l.length)-1])},
@@ -1289,10 +1293,10 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
   ${n&&S.place?fatherField():''}
   ${n&&S.place?'<p class="hint">You can change the clan and father later, and add a byname, on the last step, Name &amp; appearance.</p>':''}
   ${c?`<div class="result">Society: <b>${c}</b> · Surroundings: <b>${env()}</b></div>`:''}`}
- if(S.step===2){const w=classW();const tot=Object.values(w).reduce((a,b)=>a+b,0);const ol=occList();const o=occ();
+ if(S.step===2){const w=classW();const tot=Object.values(w).reduce((a,b)=>a+b,0);const rw=rollW(),rtot=Object.values(rw).reduce((a,b)=>a+b,0);const ivTot=ivcW().reduce((a,[,v])=>a+v.w,0);const freeBox=`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-freeonly="1" ${S.freeOnly?'checked':''}> Exclude unfree results</label>`;const ol=occList();const o=occ();
   h=`<header><h2>Station</h2><p>The class you were born into and the trade of the household that raised you. ${ivClan()?'Ivinians reckon station by clan.':c?`These are the classes of ${c} society.`:''}</p></header>${warn}
   ${!c?'<div class="result">Choose a birthplace first. It decides which classes exist.</div>':`
-  ${ivClan()?`<div class="field"><div class="lab"><b>Clan status</b>${rollBtn('cls','Roll d100')}</div><div class="chips">${Object.entries(IVC).map(([k,v])=>chip(v.n,S.ivc===k,'ivc',k,v.w+'%')).join('')}</div>${S.ivc==='great'?`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="chief" data-chief="1" ${S.chief?'checked':''}> Of the chief's blood: close kin of the clan's chieftain, with noble status and wealth (about 3 in 100 greatclan folk)</label>`:''}<span class="hint">Your clan's standing sets your class: ${S.ivc?{thrall:'a thrall is unfree, like a slave',minor:'a minor clan counts as guilded',great:S.chief?'the chief\'s kin count as noble':'a greatclan counts as unguilded',ind:'an independent counts as unguilded'}[S.ivc]+'.':'thralls are unfree, minor clans count as guilded, and greatclan and independent folk as unguilded.'}</span></div>`:`<div class="field"><div class="lab"><b>Social class</b>${rollBtn('cls','Roll d100')}</div><div class="chips">${Object.keys(CLASSES).filter(k=>k in w||k===S.cls).map(k=>chip(CLASSES[k],S.cls===k,'cls',k,k in w?Math.round(w[k]/tot*100)+'%':'')).join('')}</div><span class="hint">HârnMaster recommends choosing class to suit the campaign. The percentages show how common each is.</span></div>`}
+  ${ivClan()?`<div class="field"><div class="lab"><b>Clan status</b>${rollBtn('cls','Roll d100')}</div>${freeBox}<div class="chips">${Object.entries(IVC).map(([k,v])=>chip(v.n,S.ivc===k,'ivc',k,S.freeOnly&&k==='thrall'?'—':Math.round(v.w/ivTot*100)+'%')).join('')}</div>${S.ivc==='great'?`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="chief" data-chief="1" ${S.chief?'checked':''}> Of the chief's blood: close kin of the clan's chieftain, with noble status and wealth (about 3 in 100 greatclan folk)</label>`:''}<span class="hint">Your clan's standing sets your class: ${S.ivc?{thrall:'a thrall is unfree, like a slave',minor:'a minor clan counts as guilded',great:S.chief?'the chief\'s kin count as noble':'a greatclan counts as unguilded',ind:'an independent counts as unguilded'}[S.ivc]+'.':'thralls are unfree, minor clans count as guilded, and greatclan and independent folk as unguilded.'}</span></div>`:`<div class="field"><div class="lab"><b>Social class</b>${rollBtn('cls','Roll d100')}</div>${freeBox}<div class="chips">${Object.keys(CLASSES).filter(k=>k in w||k===S.cls).map(k=>chip(CLASSES[k],S.cls===k,'cls',k,k in rw?Math.round(rw[k]/rtot*100)+'%':k in w?'—':'')).join('')}</div><span class="hint">HârnMaster recommends choosing class to suit the campaign. ${S.freeOnly?'The percentages are the chances of each when rolling, with unfree results left out. You can still choose any class.':'The percentages show how common each is.'}</span></div>`}
   ${S.cls&&(S.cls in w)?`<div class="field"><div class="lab"><label for="occ"><b>${thrall()?'Your masters\' occupation':'Parent\'s occupation'}</b></label>${rollBtn('occ','Roll d100')}</div><select id="occ" data-set="occ"><option value="">Choose…</option>${ol.map(x=>`<option ${S.occ===x.name?'selected':''}>${x.name}</option>`).join('')}</select>${ivClan()&&S.ivc==='great'?'<span class="hint">Many greatclan folk work more than one trade: farming in spring and autumn, trading or raiding in summer. The GM may let you roll a second.</span>':''}${o?`<span class="hint">${o.urban}% of ${o.name.toLowerCase()} households live in towns.</span>`:''}</div>`:''}
   ${S.cls&&S.cls!=='slave'&&(S.cls in w)?`<div class="field"><div class="lab"><b>Family wealth</b></div><div class="chips">${['Poor','Average','Rich'].map((l,i)=>chip(l,S.wealth===i,'wealth',i,WEALTH[S.cls][i]+'d')).join('')}</div></div>`:''}
   ${S.cls?`<div class="result">Starting Status: <b>${STATUS[S.cls]}</b> (proposed) · Coin: <b>${S.cls==='slave'?'none':WEALTH[S.cls][S.wealth]+'d'}</b></div>`:''}
@@ -1722,6 +1726,7 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.aname!==undefined){if(!S.allyNames)S.allyNames=[];S.allyNames[+el.dataset.aname]=el.value.trim();render();return}
  if(el.dataset.chall){S.chAll=el.checked;render();return}
  if(el.dataset.chief){setIvc('great',el.checked);render();return}
+ if(el.dataset.freeonly){S.freeOnly=el.checked;render();return}
  if(el.dataset.byon){nameEdit(()=>{S.byOn=el.checked});render();return}
  if(el.dataset.byname){nameEdit(()=>{S.byname=el.value.trim()});render();return}
  if(el.dataset.father){setFather(el.value.trim());render();return}
