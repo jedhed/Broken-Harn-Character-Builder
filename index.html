@@ -206,9 +206,9 @@ td b{font:700 17.5px var(--head)}
 .pshort{display:none}
 @media (max-width:600px){
  .pfull{display:none}.pshort{display:inline}
- .phases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
- .phase{flex-direction:column;flex-wrap:nowrap;align-items:center;gap:4px;font-size:15px;letter-spacing:.04em;padding:8px 2px 6px;text-align:center}
- .phase .cnt{font-size:13.5px;padding:0 7px}
+ .phases{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
+ .phase{flex-direction:column;flex-wrap:nowrap;align-items:center;gap:4px;font-size:13px;letter-spacing:.02em;padding:8px 1px 6px;text-align:center}
+ .phase .cnt{font-size:12.5px;padding:0 5px}
  .banner{padding-inline:16px;align-items:center;gap:4px 10px}
  .banner .name{font-size:20px}
  .banner.inchar .sect{display:none}
@@ -275,7 +275,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-2';
+const APPVER='2026.10.17-3';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1118,7 +1118,7 @@ function showFormal(){const f=$('#formal');if(!f)return;const t=formalName();f.t
 function setFather(v){S.father=v}
 
 /* ---------- state ---------- */
-const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},promptArms:true,promptClothOn:false,promptCloth:'',look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,freeOnly:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},step:6});
+const blank=()=>({folk:'Human',nation:'',place:'',inSet:false,cls:'',occ:'',wealth:1,bg:'',picks:{},dual:'',lang2:'',lang40:'',age:'Adult',birth:null,sibs:null,parent:'',standing:'',travel:null,allies:null,concept:'',career:'',deity:'',role:'lay',sex:'',dualTribe:'',people:'',clan:'',father:'',patro:null,given:'',byname:'',byOn:null,nameHand:false,handName:'',ivc:'',chief:false,clanAuto:'',portrait:'',prompt:{pos:'',neg:''},promptArms:true,promptClothOn:false,promptCloth:'',look:null,orbLang:'',years:null,ageSet:false,abil:[],cuspPick:'',life:{origin:null,youth:null,recent:null},lifeFilter:true,freeOnly:true,allyNames:[],occ2:'',swPath:'',chantry:'',chAll:false,cw:[],cp:{},ctal:[],cswap:'',ccoin:null,sw:newSw(),ro:newRo(),at:newAt(),traits:[],goals:[],gear:newGear(),tsub:{},b30:{},lastIn:{},step:6});
 let S=blank();
 const GM={Sindarin:false,Khuzdul:false,d:1,m:1,y:720,accents:true,pdfDraft:false};
 const AGE_R={Young:[20,29],Adult:[30,49],Old:[50,69]};
@@ -1402,6 +1402,8 @@ function travelOut(){const tot=S.travel.roll+travelMod().m;const t=TRAVEL.find(x
 const PHASES=[['The Basics',1,'Basics'],['Family & Origin',5,'Origin'],['Your Character',5,'Character'],['Outfitting & Final Touches',4,'Outfitting']];let viewPhase=null;
 const phaseSteps=k=>{const st=PHASES.slice(0,k).reduce((a,p)=>a+p[1],0);return ORDER.slice(st,st+PHASES[k][1])};
 const phaseOf=i=>PHASES.findIndex((_,k)=>phaseSteps(k).includes(i));
+/* Move to a step. A stage tab moves to the step last visited in that stage (kept in S.lastIn), or its first. */
+function goStep(i){if((S.step===10||S.step===6)&&i!==S.step)S.ageSet=true;S.step=i;viewPhase=null;window.scrollTo(0,0)}
 function steps(){const I=issues();const bad=i=>(I[i]||[]).length>0;const cur=phaseOf(S.step);const vp=viewPhase===null?cur:viewPhase;
  $('#steps').innerHTML=`<div class="phases" role="tablist">${PHASES.map(([n,,sh],k)=>{const st=phaseSteps(k),d=st.filter(i=>done(i)&&!bad(i)).length,b=st.filter(bad).length;return`<button type="button" class="phase" role="tab" aria-selected="${k===vp}" data-act="phase" data-val="${k}" aria-label="${n}"><span class="pfull">${n}</span><span class="pshort">${sh}</span> <span class="cnt ${b?'bad':d===st.length?'ok':'warn'}">${d} of ${st.length}${b?' · '+b+' to fix':''}</span></button>`}).join('')}</div>
  <div class="steps">${phaseSteps(vp).map(i=>{const now=S.step===i;const m=bad(i)?'bad':now?'now':done(i)?'done':'';return`<button class="step" data-act="go" data-val="${i}" ${now?'aria-current="step"':''}><span class="mark ${m}" title="${bad(i)?'Needs another look':done(i)?'Complete':'Not finished'}"></span>${STEPS[i]}${bad(i)?'<span class="sr"> (needs another look)</span>':''}</button>`}).join('')}</div>`}
@@ -1426,13 +1428,13 @@ function sheet(){const c=culture();const o=occ();const t=tongues();const {led,ex
 const SAVEKEY='broken-harn:current',STOREKEY='broken-harn:characters';let saveOK=null;
 let CHARS=[],CUR=null,VIEW='start',pendingDel=null,finMsg=null;
 const newId=()=>'c'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);
-const strip=o=>JSON.stringify({...o,step:0});
+const strip=o=>JSON.stringify({...o,step:0,lastIn:0});
 const summary=()=>({career:S.career?careerLine():'',born:S.place?(S.nation==='tribal'?'Among the '+esc(S.place):esc(S.place)+', '+NAT[S.nation].name):'',done:ORDER.filter(i=>done(i)&&!(issues()[i]||[]).length).length});
 let saveFull=false;
 /* Several tabs can be open on the app at once. Before each save, characters saved by another tab are merged in (the newer copy of each wins) and characters deleted in another tab are dropped, so one tab never wipes out another's work. Other tabs pick up each save as it happens. */
 const GONE=new Set();let syncing=false;
 function syncList(d){const gone=new Set([...(Array.isArray(d.gone)?d.gone:[]),...GONE]);const open=VIEW==='char'&&CUR;if(open)gone.delete(CUR);CHARS=CHARS.filter(c=>!gone.has(c.id));
- (Array.isArray(d.list)?d.list:[]).forEach(o=>{if(!o||!o.id||!o.S||typeof o.S!=='object'||Array.isArray(o.S)||gone.has(o.id))return;const m=CHARS.find(c=>c.id===o.id);if(!m){CHARS.push(o);return}if((o.saved||0)<=(m.saved||0))return;Object.assign(m,o);if(open&&o.id===CUR){const st=S.step;S=Object.assign(blank(),JSON.parse(JSON.stringify(o.S)));S.step=st}});return gone}
+ (Array.isArray(d.list)?d.list:[]).forEach(o=>{if(!o||!o.id||!o.S||typeof o.S!=='object'||Array.isArray(o.S)||gone.has(o.id))return;const m=CHARS.find(c=>c.id===o.id);if(!m){CHARS.push(o);return}if((o.saved||0)<=(m.saved||0))return;Object.assign(m,o);if(open&&o.id===CUR){const st=S.step,li=S.lastIn;S=Object.assign(blank(),JSON.parse(JSON.stringify(o.S)));S.step=st;S.lastIn=li}});return gone}
 function store(){if(syncing)return;try{let d=null;try{d=JSON.parse(localStorage.getItem(STOREKEY)||'null')}catch(e){}const gone=d&&d.v===2?syncList(d):new Set(GONE);localStorage.setItem(STOREKEY,JSON.stringify({v:2,list:CHARS,current:CUR,GM,gone:[...gone].slice(-500)}));GONE.clear();saveOK=true;saveFull=false}catch(e){saveOK=false;saveFull=!!e&&(e.name==='QuotaExceededError'||e.code===22||e.name==='NS_ERROR_DOM_QUOTA_REACHED')}}
 function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e){const nm=$('#name').value;if(!e.S||strip(e.S)!==strip(S)||e.name!==nm)e.saved=Date.now();e.name=nm;e.S=JSON.parse(JSON.stringify(S));e.sum=summary()}}
  store();const n=$('#savenote');n.textContent=saveOK?'Saved in this browser':saveFull?'Not saved: this browser\'s storage is full. Remove a portrait, or download and delete old characters.':'Not saved: this browser is blocking storage';n.classList.toggle('bad',!saveOK)}
@@ -1642,9 +1644,12 @@ function importChar(text){finMsg=null;const r=readCharFile(text);if(!r.err){cons
  const id=newId();CHARS.unshift({id,name:r.name,S:r.S,saved:Date.now(),sum:null});openChar(id);
  const cp=r.camp;loadMsg=null;render();if(cp&&(cp.d!==GM.d||cp.m!==GM.m||cp.y!==GM.y)){const n=$('#dlnote');if(n)n.textContent='This file was made for a campaign starting '+cp.d+' '+(MONTHS[cp.m-1]||'')+' '+yearTxt(cp.y)+'. Yours starts '+campTxt()+', so the birth year may differ.'}}
 function syncGM(){$('#eyebrow').textContent='Character roll · '+yearTxt(GM.y);const m=$('#camp-m');if(!m.options.length)m.innerHTML=MONTHS.map((n,i)=>`<option value="${i+1}">${n}</option>`).join('');const set=(el,v)=>{if(document.activeElement!==el)el.value=v};set($('#camp-d'),GM.d);set(m,GM.m);set($('#camp-y'),GM.y);$('#gm-sindarin').checked=!!GM.Sindarin;$('#gm-khuzdul').checked=!!GM.Khuzdul;$('#gm-accents').checked=GM.accents!==false;$('#gm-pdfdraft').checked=!!GM.pdfDraft}
-function render(){syncGM();const st=VIEW==='start';$('#start').hidden=!st;$('#steps').hidden=st;$('#cols').hidden=st;$('#lnk-chars').hidden=st;document.querySelector('.banner').classList.toggle('inchar',!st);
+/* Each browser tab remembers its own place (the list, or which character) so a refresh returns there; a new tab opens on the list. */
+const TABKEY='broken-harn:tab';
+function tabMemo(){try{sessionStorage.setItem(TABKEY,JSON.stringify({view:VIEW,cur:CUR}))}catch(e){}}
+function render(){syncGM();tabMemo();const st=VIEW==='start';$('#start').hidden=!st;$('#steps').hidden=st;$('#cols').hidden=st;$('#lnk-chars').hidden=st;document.querySelector('.banner').classList.toggle('inchar',!st);
  if(st){$('#sect').textContent='Characters';store();startScreen();return}
- ageSettled();$('#sect').textContent=STEPS[S.step];steps();panel();sheet();$('#name').value=currentName();showFormal();showPortrait();saveNow();pdfGate()}
+ ageSettled();(S.lastIn||(S.lastIn={}))[phaseOf(S.step)]=S.step;$('#sect').textContent=STEPS[S.step];steps();panel();sheet();$('#name').value=currentName();showFormal();showPortrait();saveNow();pdfGate()}
 
 /* ---------- events ---------- */
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.val;
@@ -1659,10 +1664,10 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
  if(a==='del'){pendingDel=v;render();return}
  if(a==='delno'){pendingDel=null;render();return}
  if(a==='delyes'){GONE.add(v);CHARS=CHARS.filter(c=>c.id!==v);if(CUR===v)CUR=null;pendingDel=null;render();return}
- if(a==='phase')viewPhase=+v;
+ if(a==='phase'){const ss=phaseSteps(+v),li=(S.lastIn||{})[v];goStep(ss.includes(li)?li:ss[0])}
  else{
   if(a.startsWith('lk'))lookAct(a,v);
-  else if(a==='go'){if((S.step===10||S.step===6)&&+v!==S.step)S.ageSet=true;S.step=+v;viewPhase=null;window.scrollTo(0,0)}
+  else if(a==='go')goStep(+v);
   else if(a==='b30'){const[c,x]=v.split('|');S.b30[c]=S.b30[c]===x?'':x}
   else if(a==='career'){const nv=S.career===v?'':v;if(nv!==S.career){S.occ2='';S.swPath='';S.chantry=''}S.career=nv}
   else if(a==='role')S.role=v;
@@ -1758,7 +1763,7 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.life){const t=el.dataset.life;S.life[t]=el.value?{lo:+el.value,pick:'',rel:''}:null;if(S.life[t]){const o=optionsFor(lifeEv(t));if(o.length===1)S.life[t].pick=o[0];if(t==='origin')afterOrigin()}render();return}
  const k=el.dataset.set;if(!k)return;S[k]=el.value;if(k==='place')S.inSet=false;if(k==='deity'&&S.role!=='lay'&&!(FAITH[S.deity]||{})[S.role])S.role='lay';render()});
 
-loadSaved();if(!(CUR&&openChar(CUR)))VIEW='start';render();
+loadSaved();{let t=null;try{t=JSON.parse(sessionStorage.getItem(TABKEY)||'null')}catch(e){}if(!(t&&t.view==='char'&&t.cur&&openChar(t.cur)))VIEW='start'}render();
 window.addEventListener('storage',ev=>{if(ev.key!==STOREKEY||!ev.newValue)return;let d;try{d=JSON.parse(ev.newValue)}catch(e){return}if(!d||d.v!==2)return;Object.assign(GM,d.GM||{});syncList(d);syncing=true;try{render()}finally{syncing=false}});
 $('#name').addEventListener('click',()=>{if(VIEW==='char'){S.step=NAMESTEP;viewPhase=null;render();window.scrollTo(0,0)}});
 $('#filein').addEventListener('change',ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;if(f.size>2e6){loadMsg=[false,'That file is too large to be a character file.'];render();return}const r=new FileReader();r.onload=()=>importChar(String(r.result));r.onerror=()=>{loadMsg=[false,'That file could not be read.'];render()};r.readAsText(f)});
