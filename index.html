@@ -289,7 +289,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-12';
+const APPVER='2026.10.17-13';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1646,7 +1646,6 @@ function pdfData(name){const V={},B=[],CAP={},N=[];const c=culture();const {led,
  if(S.gear.coin!==null)set('silver_pieces',G.left);if(S.cls)set('status',statusVal());
  const npc=[...LIFET.filter(([k])=>S.life[k]&&S.life[k].rel).map(([k])=>S.life[k].rel+(S.life[k].relName?': '+S.life[k].relName:'')+(S.life[k].rRom?', '+ROMTXT[S.life[k].rRom]:'')+' (from '+lifeEv(k).name+')'),...allyList()];
  npc.forEach((x,i)=>i<5?set('relationship_npc_'+(i+1),x):N.push('NPC: '+x));
- relNotes().forEach(([w,n])=>N.push(w+': '+n));
  set('inventory_max_enc',A.inv.val);
  const inv=[...S.gear.items.filter(x=>!x.hand).map(x=>[x.n,WMAP[x.n][4]]),...S.gear.misc.map(n=>[n,MISC.find(m=>m[0]===n)[2]])];
  inv.forEach(([n,e],i)=>{if(i<10){set('inventory_'+(i+1),n);set('inventory_'+(i+1)+'_enc',e)}else N.push('Item: '+n+', ENC '+e)});
@@ -1663,6 +1662,10 @@ function page3Data(){const c=culture();const t=tongues();const R=[];const has=v=
  sec('Birth and sunsign',[['Born on',S.birth?S.birth.d+' '+monthName(S.birth.m)+(ageSettled()?' '+unesc(yearTxt(birthYear())):''):''],['Age',ageSettled()?S.age+', '+ageYears():''],
   ['Sunsign',ss?ss+(sg&&sg!==ss?', taking '+sg:''):''],['Its gifts',sg?'+10 '+k[0]+', +5 '+k[1]+' and '+k[2]:''],['Affinity',af?af[0].join(' and ')+' (+1 Mastery)':''],['Impedance',af?af[1].join(' and ')+' (+1 TC)':'']]);
  sec('Tongues and lore',[...t.L.map(l=>[l[0],String(l[1]),l[2]||'']),...t.W.map(w=>[w[0],String(w[1]),w[2]||''])],'value');
+ /* Relationships: the role in the label, then name, sex, romance, where they came from, the player's notes and any goals tied to them. */
+ const dot=x=>/[.!?…]$/.test(x)?x:x+'.';
+ sec('Relationships',relKeys().map(relRef).filter(Boolean).map(r=>{const m=r.meta,gs=S.goals.filter(g=>g.rel===r.key).map(g=>g.text);
+  return[r.role,[[r.name,m.rSex?m.rSex.toLowerCase():'',m.rRom?ROMTXT[m.rRom]:''].filter(Boolean).join(', '),r.own!==undefined?'':'From '+r.from.replace(/^Your /,'your '),(m.rNote||'').trim(),...gs.map(g=>'Goal: '+g)].filter(Boolean).map(dot).join(' ')]}));
  return R}
 async function addPage3(doc,L,F,safe,name){const T=await p3Fonts(doc,F);const W=612,H=792,M=18,G=12,PW=Math.round((W-2*M-G)/3),LW=W-2*M-G-PW,TOP=700,BOT=28;
  const red=L.rgb(.502,0,0),ink=L.rgb(.17,.17,.17),grey=L.rgb(.42,.42,.42),bar=L.rgb(.91,.91,.91),edge=L.rgb(.35,.35,.35);
