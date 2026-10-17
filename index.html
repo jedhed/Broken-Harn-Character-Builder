@@ -289,7 +289,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-11';
+const APPVER='2026.10.17-12';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1009,6 +1009,7 @@ function relCard(key){const r=relRef(key);if(!r)return'';const m=r.meta,id=key.r
  <div class="chips">${ROLES4.map(x=>chip(x,r.role===x,'rrole',key+'|'+x)).join('')}</div>${r.role?`<span class="hint">${ROLEDESC[r.role]||''}</span>`:''}
  <div class="chips"><input class="text" style="width:auto;flex:1;min-width:10em" id="rn_${id}" data-rname="${key}" value="${esc(nm)}" placeholder="Their name" aria-label="Name"><select data-rsex="${key}" aria-label="Their sex"><option value="" ${sx?'':'selected'}>Not stated</option><option value="Male" ${sx==='Male'?'selected':''}>Male</option><option value="Female" ${sx==='Female'?'selected':''}>Female</option></select>${rollBtn('rname:'+key,'Roll a name')}</div>
  <div class="chips" style="align-items:center"><span class="hint">Romance</span>${[['','None'],['current','Current lover'],['former','Former lover']].map(([v,l])=>chip(l,(m.rRom||'')===v,'rrom',key+'|'+v)).join('')}${r.sug?'<span class="tag">Suggested by this event</span>':''}</div>
+ <div class="chips"><button class="btn" data-act="rgoal" data-val="${key}">Make a goal from this</button></div>
  <textarea class="text" rows="2" maxlength="300" id="rt_${id}" data-rnote="${key}" placeholder="Notes: who they are to you, how it stands now" aria-label="Notes on this relationship">${esc(m.rNote||'')}</textarea><span class="hint rcnt" id="rc_${id}"></span></div>`}
 function tgPanel(){const tr=S.traits,full=tr.length>=3;const sw=signWords();const desc=S.abil.map(a=>a.desc).filter(Boolean);
  const draw=[...LIFET.filter(([t])=>S.life[t]).map(([t])=>lifeEv(t).name+(S.life[t].rel?' ('+relText(S.life[t])+')':'')),...allyList(),S.parent,S.standing?S.standing+' in the clan':'',S.concept].filter(Boolean);
@@ -1023,13 +1024,14 @@ function tgPanel(){const tr=S.traits,full=tr.length>=3;const sw=signWords();cons
   <span class="hint">Relationships change in play: smart play or betrayal can turn an Adversary into a Rival or a Friend, or the other way round.</span>
   ${relKeys().map(relCard).join('')||'<div class="result">No one yet. Choose “Someone from this event” on Life events, roll your travels on Kin &amp; travel, or add someone here.</div>'}</div>
  <div class="sub"><div class="lab"><span><b>Goals</b> <span class="hint">aim for three to five, with at least one of your own and one shared with the party</span></span>${goalCnt()}</div>
+  ${S.goals.length&&relKeys().length?`<span class="hint">${S.goals.filter(g=>tieLabel(g)).length} of ${S.goals.length} ${S.goals.length===1?'goal':'goals'} tied to a relationship. Not required, but ties give the GM someone to put in your way.</span>`:''}
   ${S.goals.length>=6?'<p class="note">Six or more goals may be too many for a starting character. Only 3 experience points a session can come from goals, however many you pursue.</p>':''}
-  ${S.goals.map((g,i)=>`<div class="result goalcard"><div>${esc(g.text)}${goalOk(g.text)?'':' <i class="hint">Goals read best starting with “I will”, “I want”, “I need” or “I must”.</i>'}<div class="chips" style="margin-top:8px">${chip('Mine',g.kind==='individual','goalkind',i+'|individual')}${chip('Shared with the party',g.kind==='shared','goalkind',i+'|shared')}</div></div><button class="link" data-act="goaldel" data-val="${i}">Remove</button></div>`).join('')}
+  ${S.goals.map((g,i)=>`<div class="result goalcard"><div>${esc(g.text)}${goalOk(g.text)?'':' <i class="hint">Goals read best starting with “I will”, “I want”, “I need” or “I must”.</i>'}<div class="chips" style="margin-top:8px">${chip('Mine',g.kind==='individual','goalkind',i+'|individual')}${chip('Shared with the party',g.kind==='shared','goalkind',i+'|shared')}${relKeys().length||g.rel?`<select data-gtie="${i}" aria-label="Tied to"><option value="">Not tied to anyone</option>${relKeys().map(k=>`<option value="${k}" ${g.rel===k?'selected':''}>Tied to: ${esc(relPick(relRef(k)))}</option>`).join('')}${g.rel&&!relRef(g.rel)?`<option value="${g.rel}" selected>Tied to: ${esc(g.relLabel||'someone removed')}</option>`:''}</select>`:''}</div></div><button class="link" data-act="goaldel" data-val="${i}">Remove</button></div>`).join('')}
   <div class="field"><div class="lab"><label for="goaltext"><b>Write a goal</b></label></div><div class="chips"><input class="text" style="width:auto;flex:1" id="goaltext" placeholder="I will…"><button class="btn" data-act="goaladd">Add</button></div>
    <span class="hint">Make it specific, something you do yourself, and something that can be finished.</span></div>
   <div class="field"><div class="lab"><b>Or build one in three steps</b></div>
    <div class="gbuild">
-    <label for="gwant">I want to</label><input class="text" id="gwant" placeholder="avenge my brother">
+    <label for="gwant">I want to</label><input class="text" id="gwant" placeholder="avenge my brother" value="${esc(goalDraft?goalDraft.want:'')}">${goalDraft?`<span></span><span class="hint">Tied to: ${esc(goalDraft.label)}. Finish the goal below.</span>`:''}
     <label for="gblock">Despite</label><input class="text" id="gblock" placeholder="his hideout being well guarded (optional)">
     <label for="gdo">I will</label><input class="text" id="gdo" placeholder="pick off his scouts and lieutenants">
    </div>
@@ -1141,12 +1143,19 @@ function relRef(key){const i=key.indexOf(':'),k=key.slice(0,i),x=key.slice(i+1);
  if(k==='life'){const l=S.life[x];if(!l)return null;return{key,meta:l,get role(){return l.rel||''},set role(v){l.rel=v},get name(){return l.relName||''},set name(v){l.relName=v},from:LIFET.find(t=>t[0]===x)[1]+': '+lifeEv(x).name,sug:ROMANCE_EV.includes(lifeEv(x).name)}}
  if(k==='ally'){const n=+x,a=(S.allies||[])[n];if(a===undefined)return null;if(!S.allyMeta)S.allyMeta=[];const m=S.allyMeta[n]||(S.allyMeta[n]={});const who=()=>S.allies[n].split(': ').slice(1).join(': ');
   return{key,meta:m,get role(){return S.allies[n].split(': ')[0]},set role(v){S.allies[n]=v+': '+who()},get name(){return(S.allyNames||[])[n]||''},set name(v){(S.allyNames||(S.allyNames=[]))[n]=v},from:'Your travels: '+who(),sug:false}}
- const o=(S.ownRel||[])[+x];if(!o)return null;return{key,meta:o,get role(){return o.role},set role(v){o.role=v},get name(){return o.name||''},set name(v){o.name=v},from:'Added by you',sug:false,own:+x}}
-const relKeys=()=>[...LIFET.filter(([t])=>S.life[t]&&S.life[t].rel).map(([t])=>'life:'+t),...(S.allies||[]).map((_,i)=>'ally:'+i),...(S.ownRel||[]).map((_,i)=>'own:'+i)];
+ const o=(S.ownRel||[]).find(r=>r.id===x);if(!o)return null;return{key,meta:o,get role(){return o.role},set role(v){o.role=v},get name(){return o.name||''},set name(v){o.name=v},from:'Added by you',sug:false,own:o.id}}
+const relKeys=()=>[...LIFET.filter(([t])=>S.life[t]&&S.life[t].rel).map(([t])=>'life:'+t),...(S.allies||[]).map((_,i)=>'ally:'+i),...(S.ownRel||[]).map(o=>{if(!o.id)o.id=newId();return'own:'+o.id})];
 /* A rolled name follows the person's sex if set; a lover with none set leans to the opposite sex. */
 function rollRelName(key){const r=relRef(key);if(!r)return;const m=r.meta;const opp=S.sex==='Male'?'Female':S.sex==='Female'?'Male':'';r.name=npcName(m.rSex||(m.rRom?opp:''));m.rSex=npcName.last}
 /* ♂/♀ beside a name on Life events and Kin & travel: shows the person's sex; click to set it, click again to clear (Not stated). */
 const sexBtns=key=>{const r=relRef(key),x=r&&r.meta.rSex||'';return[['Male','♂'],['Female','♀']].map(([v,g])=>`<button class="chip rsx" aria-pressed="${x===v}" data-act="rsex" data-val="${key}|${v}" aria-label="${v}" title="${v}">${g}</button>`).join('')};
+/* Goals tied to a relationship keep its key (g.rel) and a label in case the person is later removed. "Make a goal from this" starts the builder with a phrase for the role. */
+let goalDraft=null;
+const relLabel=r=>r.role+(r.name?' '+r.name:'');
+const relPick=r=>r.name?relLabel(r):r.role+' ('+r.from+')';
+const tieLabel=g=>{if(!g.rel)return'';const r=relRef(g.rel);return r?relPick(r):g.relLabel||''};
+const GOALSTART={Friend:'help ',Patron:'repay ',Rival:'outdo ',Adversary:'bring '};
+const goalStart=r=>{const who=r.name||'my '+r.role.toLowerCase();return(GOALSTART[r.role]||'')+who+(r.role==='Adversary'?' to justice':'')};
 const romTag=m=>m&&m.rRom?' ('+ROMTXT[m.rRom]+')':'';
 function fullName(){const s=nameSet();if(!S.clan&&!elder())rollClan();if(patroOn()&&!S.father)rollFather();const g=rollPart(s.given,s.cult);S.given=g;return everyday()}
 /* Bynames: an everyday name that takes precedence. With one, the name reads "Erik Halfhand" and the formal name (patronymic, clan) sits beneath it.
@@ -1502,7 +1511,7 @@ function sheet(){const c=culture();const o=occ();const t=tongues();const {led,ex
  const lf=`<div class="sec"><h3>Life events</h3><div class="ents">${LIFET.some(([t])=>S.life[t])?LIFET.filter(([t])=>S.life[t]).map(([t,n])=>{const l=S.life[t];return`<div class="ent"><b>${lifeEv(t).name}</b> <small>${n.toLowerCase()}${l.pick?', '+grantLabel(l.pick):''}${l.rel?', '+esc(relText(l)):''}</small></div>`}).join(''):e}</div></div>`;
  const G=gearCalc();const gs=`<div class="sec"><h3>Gear ${S.gear.coin!==null?`<span class="cnt ${G.left<0?'bad':'ok'}">${G.left<0?(-G.left)+'d over':G.left+'d left'}</span>`:''}</h3><div class="rows stripe"><div class="row"><span>Dagger <small>damage 1, at hand</small></span><span></span></div>${S.gear.items.map(x=>{const w=WMAP[x.n];return`<div class="row"><span>${w[0]} <small>${w[1]==='Shield'?w[3]:'damage '+w[3]}${x.hand?'':', packed'}</small></span><span></span></div>`}).join('')}${G.pieces.map(x=>`<div class="row"><span>${x.n} <small>${x.a[0]}</small></span><span>AP ${x.a[2]}</span></div>`).join('')}${S.gear.misc.map(n=>`<div class="row"><span>${n}</span><span></span></div>`).join('')}</div>${Object.keys(G.pn).length?`<p class="fine">In this armor: ${Object.entries(G.pn).map(([k,v])=>k+' −'+v).join(', ')}</p>`:''}<p class="fine">Supply dice: Gear, Ammo, Rations and Medical at d12</p></div>`;
  const trLine=()=>{const t=S.traits.map(x=>`<b>${esc(x)}</b>`);if(!t.length)return'<span class="empty">no traits yet</span>';const list=t.length===1?t[0]:t.length===2?t.join(' and '):t.slice(0,-1).join(', ')+' &amp; '+t[t.length-1];return S.traits.some(x=>x.trim().split(/\s+/).length>=3)?list+'.':'You are '+list+'.'};
- const gSub=(kind,label)=>{const l=S.goals.filter(g=>g.kind===kind);return l.length?`<div class="grp"><h4 class="subh">${label}</h4><div class="ents">${l.map(g=>`<div class="ent goal">${esc(g.text)}</div>`).join('')}</div></div>`:''};
+ const gSub=(kind,label)=>{const l=S.goals.filter(g=>g.kind===kind);return l.length?`<div class="grp"><h4 class="subh">${label}</h4><div class="ents">${l.map(g=>`<div class="ent goal">${esc(g.text)}${tieLabel(g)?` <small>tied to ${esc(tieLabel(g))}</small>`:''}</div>`).join('')}</div></div>`:''};
  const pg=`<div class="sec"><h3>Personality and goals</h3>${S.traits.length||S.goals.length?`<p class="traitline">${trLine()}</p>${gSub('individual','My goals')}${gSub('shared','Shared goals')}`:e}</div>`;
  $('#sheet').innerHTML=id+atr+gs+lang+apt+sk+mag+lf+pg+kin}
 const SAVEKEY='broken-harn:current',STOREKEY='broken-harn:characters';let saveOK=null;
@@ -1580,7 +1589,7 @@ function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();con
  L.push('- Dagger, damage 1, at hand');S.gear.items.forEach(x=>{const w=WMAP[x.n];L.push('- '+w[0]+', '+(w[1]==='Shield'?w[3]:'damage '+w[3])+', '+(x.hand?'at hand':'packed'))});G.pieces.forEach(x=>L.push('- '+x.n+': '+x.a[0]+', AP '+x.a[2]));S.gear.misc.forEach(n=>L.push('- '+n));
  L.push('');if(Object.keys(G.pn).length)L.push('In this armor: '+Object.entries(G.pn).map(([k,v])=>k+' −'+v).join(', ')+'.');L.push('Supply dice: Gear d12, Ammo d12, Rations d12, Medical d12.');
  L.push('','## Personality and goals',S.traits.length?S.traits.join(', '):'No traits yet');
- [['individual','My goals'],['shared','Shared goals']].forEach(([k,lab])=>{const g=S.goals.filter(x=>x.kind===k);if(g.length){L.push('','**'+lab+'**');g.forEach(x=>L.push('- '+x.text))}});
+ [['individual','My goals'],['shared','Shared goals']].forEach(([k,lab])=>{const g=S.goals.filter(x=>x.kind===k);if(g.length){L.push('','**'+lab+'**');g.forEach(x=>L.push('- '+x.text+(tieLabel(x)?' *(tied to '+tieLabel(x)+')*':'')))}});
  const todo=ORDER.filter(i=>!done(i)).map(i=>STEPS[i]);
  L.push('','---','*Made with Broken Hârn: Character Builder. Campaign start '+campTxt()+'.*','*Unfinished steps: '+(todo.length?todo.join(', '):'none')+'.*','');
  const data=b64(JSON.stringify({v:1,name:name||'',S,camp:{d:GM.d,m:GM.m,y:GM.y}})).replace(/(.{76})/g,'$1\n');
@@ -1764,8 +1773,8 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='go')goStep(+v);
   else if(a==='title')S.title=(S.title||'')===v?'':v;
   else if(a==='rrole'||a==='rrom'||a==='rsex'){const i=v.lastIndexOf('|'),r=relRef(v.slice(0,i)),x=v.slice(i+1);if(r){if(a==='rrole')r.role=x;else if(a==='rrom')r.meta.rRom=x;else r.meta.rSex=r.meta.rSex===x?'':x}}
-  else if(a==='radd'){if(!S.ownRel)S.ownRel=[];S.ownRel.push({role:'Friend',name:'',rSex:'',rRom:'',rNote:''})}
-  else if(a==='rdel'){if(S.ownRel)S.ownRel.splice(+v,1)}
+  else if(a==='radd'){if(!S.ownRel)S.ownRel=[];S.ownRel.push({id:newId(),role:'Friend',name:'',rSex:'',rRom:'',rNote:''})}
+  else if(a==='rdel'){if(S.ownRel)S.ownRel=S.ownRel.filter(o=>o.id!==v)}
   else if(a==='b30'){const[c,x]=v.split('|');S.b30[c]=S.b30[c]===x?'':x}
   else if(a==='career'){const nv=S.career===v?'':v;if(nv!==S.career){S.occ2='';S.swPath='';S.chantry=''}S.career=nv}
   else if(a==='role')S.role=v;
@@ -1784,8 +1793,9 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='pcopy'){copyText(v==='mj'?promptMj():v==='neg'?promptNeg():promptPos(),v==='mj'?'Copied for Midjourney.':v==='neg'?'Negative prompt copied.':'Prompt copied.');return}
   else if(a==='preset')S.prompt={pos:'',neg:''};
   else if(a==='portdel')S.portrait='';
-  else if(a==='goaladd'){const t=$('#goaltext').value.trim();if(t)S.goals.push({text:t,kind:'individual'})}
-  else if(a==='goalbuild'){const t=goalText();if(t)S.goals.push({text:t,kind:'individual'})}
+  else if(a==='goaladd'){const t=$('#goaltext').value.trim();if(t){S.goals.push({text:t,kind:'individual',...(goalDraft?{rel:goalDraft.key,relLabel:goalDraft.label}:{})});goalDraft=null}}
+  else if(a==='goalbuild'){const t=goalText();if(t){S.goals.push({text:t,kind:'individual',...(goalDraft?{rel:goalDraft.key,relLabel:goalDraft.label}:{})});goalDraft=null}}
+  else if(a==='rgoal'){const r=relRef(v);if(r){goalDraft={key:v,label:relPick(r),want:goalStart(r)};setTimeout(()=>{const g=$('#gdo');if(g){g.scrollIntoView({block:'center'});g.focus()}},0)}}
   else if(a==='goalkind'){const[i,k]=v.split('|');S.goals[+i].kind=k}
   else if(a==='goaldel')S.goals.splice(+v,1);
   else if(a==='atp'){const i=v.lastIndexOf('|');const k=v.slice(0,i),d=+v.slice(i+1);if(d<0)S.at[k]=Math.max(0,S.at[k]+d);else if(atLeft()>=d)S.at[k]+=d}
@@ -1836,6 +1846,7 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.patro){S.patro=el.checked;render();return}
  if(el.dataset.given){S.given=el.value.trim();render();return}
  if(el.dataset.title!==undefined){S.title=el.value.trim();render();return}
+ if(el.dataset.gtie!==undefined){const g=S.goals[+el.dataset.gtie];if(g){const r=el.value&&relRef(el.value);if(r){g.rel=el.value;g.relLabel=relPick(r)}else if(!el.value){delete g.rel;delete g.relLabel}}render();return}
  if(el.dataset.rname||el.dataset.rsex!==undefined||el.dataset.rnote){const r=relRef(el.dataset.rname||el.dataset.rsex||el.dataset.rnote);if(r){if(el.dataset.rname)r.name=el.value.trim();else if(el.dataset.rnote)r.meta.rNote=el.value.replace(/\s+/g,' ').trim().slice(0,300);else r.meta.rSex=el.value}render();return}
  if(el.dataset.bhand){S.birthHand=el.checked;if(el.checked){if(!S.birthMine)S.birthMine=S.birth?{m:S.birth.m,d:S.birth.d}:{m:0,d:0};birthFromMine()}render();return}
  if(el.dataset.bmon||el.dataset.bday){if(!S.birthMine)S.birthMine={m:0,d:0};S.birthMine[el.dataset.bmon?'m':'d']=+el.value||0;birthFromMine();render();return}
