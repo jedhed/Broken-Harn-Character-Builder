@@ -122,7 +122,7 @@ button.link{border:0;background:none;padding:0;color:var(--ink);text-decoration:
 .lvkey{display:flex;flex-wrap:wrap;gap:2px 14px;margin:2px 0 6px}
 .relcard{border:1px solid var(--hair);background:var(--card);padding:10px 12px;margin:8px 0;display:flex;flex-direction:column;gap:6px}
 .relcard textarea{width:100%;resize:vertical;font:inherit}
-.rsx{min-width:2.2em;justify-content:center}
+.rsx{min-width:2.2em;display:inline-flex;align-items:center;justify-content:center}.rsx svg{width:16px;height:16px}
 .btn.mini{padding:1px 8px;font-size:15.5px}
 .btn:disabled{background:var(--hair);border-color:var(--hair);color:var(--muted);cursor:not-allowed}
 .sub{border-top:1px solid var(--hair);padding-top:12px;display:flex;flex-direction:column;gap:12px}
@@ -161,7 +161,7 @@ dd{margin:0}
 .about{border-top:1px solid var(--muted);padding-top:10px;margin-top:auto}
 .about p{margin:0 0 6px;max-width:75ch}
 .about .ver{font-weight:700}
-details.gdet{margin-top:8px;border:1px solid var(--hair);padding:6px 10px}details.gdet>*:not(summary){margin-top:6px}details.gdet>.hint{display:block}details.gdet summary{cursor:pointer;font-weight:700}
+details.gdet{margin-top:8px;border:1px solid var(--hair);padding:6px 10px}details.gdet>*:not(summary){margin-top:6px}details.gdet>.hint{display:block}.gsub{font:600 13px var(--head);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:12px!important}.gchk{display:flex;gap:8px;align-items:center;flex-wrap:wrap}details.gdet summary{cursor:pointer;font-weight:700}
 details.calls{border-top:1px solid var(--muted);padding-top:10px;margin-top:auto}
 .about+details.calls{margin-top:4px}
 details.calls summary{cursor:pointer;font-weight:700}
@@ -290,7 +290,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-19';
+const APPVER='2026.10.17-20';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -813,7 +813,7 @@ function eyeCol(){if(S.folk==='Sindarin')return'sind';const i=CXS.indexOf(LK().c
 const bodySex=()=>S.born||S.sex;
 const disguised=()=>!!S.born&&S.bornWhy==='disguise';
 /* How gender reads on the sheet: a disguise always shows the truth; a different birth sex otherwise only if the player ticks it. */
-const genderTxt=()=>{const g=(S.sex||'').toLowerCase();if(!S.born)return g;if(disguised())return'living as a '+({male:'man',female:'woman'}[g]||'person')+'; born '+S.born.toLowerCase();return S.bornShow?g+', born '+S.born.toLowerCase():g};
+const genderTxt=()=>{const g=(S.sex||'').toLowerCase();if(!S.born)return g;if(disguised())return'living as '+({male:'a man',female:'a woman'}[g]||'neither man nor woman')+'; born '+S.born.toLowerCase();return S.bornShow?g+', born '+S.born.toLowerCase():g};
 function htBase(){const fem=bodySex()==='Female';if(S.folk==='Khuzdul')return 40;if(S.folk==='Sindarin')return 51-(fem?1:0);return 54-(fem?5:bodySex()&&bodySex()!=='Neither'?0:2)}
 function htMods(){if(S.folk!=='Human')return[];const m=[];if(S.nation==='ivinia'||S.dual==='ivinia'||(orbP()==='Ivinian'&&!orbMixed()))m.push([1,'Ivinian']);if(S.cls==='noble')m.push([2,'noble']);if(env()==='City'&&['slave','serf','unguilded'].includes(S.cls))m.push([-2,'urban poor']);return m}
 /* The size score: 10 is an average person. It picks the frame, never shown as a number. */
@@ -1003,11 +1003,15 @@ function titleField(){const sg=titleSugs();
  return`<div class="field"><div class="lab"><label for="title"><b>Title</b> <span class="hint">optional, shown before the name</span></label></div><input class="text" id="title" data-title="1" value="${esc(S.title||'')}" placeholder="None">
  ${sg.length?`<div class="chips">${sg.map(t=>chip(esc(t),(S.title||'')===t,'title',esc(t))).join('')}</div>`:''}
  ${S.cls==='noble'?`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-knight="1" ${knighted()?'checked':''}> Knighted: Sir and Dame are for those knighted themselves, usually at 21${knightYear()&&knighted()?` (${knightYear()})`:''}</label>`:''}</div>`}
-function genderDetails(){const born=S.sex==='Male'?['Female']:S.sex==='Female'?['Male']:S.sex==='Neither'?['Female','Male']:[];
- return`<details class="gdet" ${S.sex==='Neither'||S.born?'open':''}><summary>Gender details</summary>
- <div class="chips">${chip('Neither',S.sex==='Neither','gneither','1')}</div><span class="hint">Neither male nor female. Names come from both lists, with the male patronymic, and titles offer both forms. Church offices kept to one gender, such as Halea's, are the GM's call.</span>
- ${born.length?`<div class="lab" style="margin-top:6px"><b>Born a different sex</b> <span class="hint">optional</span></div><div class="chips">${born.map(x=>chip('Born '+x.toLowerCase(),S.born===x,'gborn',x)).join('')}</div>`:''}
- ${S.born?`<div class="chips">${chip('It’s who they are',S.bornWhy!=='disguise','gwhy','who')}${chip('A disguise',S.bornWhy==='disguise','gwhy','disguise')}</div><span class="hint">Height and whether they can grow a beard follow birth sex; names, titles and the portrait follow their gender.${S.bornWhy==='disguise'?' A smooth face can give a disguise away. The sheet notes the disguise, and they need a cover name on the Name step.':''}</span>${S.bornWhy!=='disguise'?`<label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-bornshow="1" ${S.bornShow?'checked':''}> Show birth sex on the sheet</label>`:''}`:''}</details>`}
+function genderDetails(){const nb=S.sex==='Neither',other=S.sex==='Male'?'female':S.sex==='Female'?'male':'',pick=S.born||S.bornPick||'Male';
+ return`<details class="gdet" ${nb||S.born?'open':''}><summary>Gender options</summary>
+ <div class="gsub">Androgyny</div>
+ <span class="hint">Neither male nor female. Names come from both lists, with the male patronymic, and titles offer both forms. Church offices kept to one gender, such as Halea's, are the GM's call.</span>
+ <label class="hint gchk"><input type="checkbox" data-gneither="1" ${nb?'checked':''}> Neither male nor female</label>
+ ${S.sex?`<div class="gsub">Born a different sex</div>
+ <div class="gchk"><label class="hint gchk"><input type="checkbox" data-gborn="1" ${S.born?'checked':''}> They were born${nb?'':' '+other}</label>${nb?`<select data-gbornpick="1" aria-label="Birth sex"><option value="Male" ${pick==='Male'?'selected':''}>male</option><option value="Female" ${pick==='Female'?'selected':''}>female</option></select>`:''}</div>
+ ${S.born?`<div class="chips" style="align-items:center"><span class="hint">This is because</span>${chip('It’s who they are',S.bornWhy!=='disguise','gwhy','who')}${chip('It’s a disguise',S.bornWhy==='disguise','gwhy','disguise')}</div>
+ <span class="hint">Height and whether they can grow a beard follow birth sex; names, titles and the portrait follow their gender.${S.bornWhy==='disguise'?' A smooth face can give a disguise away. The sheet notes the disguise, and they need a cover name on the Name step.':''}</span>${S.bornWhy!=='disguise'?`<label class="hint gchk"><input type="checkbox" data-bornshow="1" ${S.bornShow?'checked':''}> Show birth sex on the sheet</label>`:''}`:''}`:''}</details>`}
 function namePanel(){const ev=everyday(),fm=formalName();
  return`<header><h2>Name and appearance</h2><p>What your character is called, and what they look like. Everything here can be rolled, and changed at any time.</p></header>
  <div class="sub"><div class="lab"><span><b>Name</b></span><button class="btn roll" data-act="rollwhole">Roll the whole name</button></div>
@@ -1162,7 +1166,9 @@ const relKeys=()=>[...LIFET.filter(([t])=>S.life[t]&&S.life[t].rel).map(([t])=>'
 /* A rolled name follows the person's gender if set; Neither draws from both name lists and stays Neither. */
 function rollRelName(key){const r=relRef(key);if(!r)return;const m=r.meta;r.name=npcName(m.rSex||'');if(m.rSex!=='Neither')m.rSex=npcName.last}
 /* ♂/♀ beside a name on Life events and Kin & travel: shows the person's gender (Male or Female; Neither is set on their card); click to set it, click again to clear (Not stated). */
-const sexBtns=key=>{const r=relRef(key),x=r&&r.meta.rSex||'';return[['Male','♂'],['Female','♀']].map(([v,g])=>`<button class="chip rsx" aria-pressed="${x===v}" data-act="rsex" data-val="${key}|${v}" aria-label="${v}" title="${v}">${g}</button>`).join('')};
+/* The ♂/♀ signs are drawn here, since the text fonts don't include them and borrowed ones vary. */
+const GSIGN={Male:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="14" r="5.5"/><path d="M14 10l6-6"/><path d="M15 4h5v5"/></svg>',Female:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="5.5"/><path d="M12 14.5v7.5"/><path d="M8.5 18.5h7"/></svg>'};
+const sexBtns=key=>{const r=relRef(key),x=r&&r.meta.rSex||'';return[['Male',GSIGN.Male],['Female',GSIGN.Female]].map(([v,g])=>`<button class="chip rsx" aria-pressed="${x===v}" data-act="rsex" data-val="${key}|${v}" aria-label="${v}" title="${v}">${g}</button>`).join('')};
 /* Goals tied to a relationship keep its key (g.rel) and a label in case the person is later removed. "Make a goal from this" starts the builder with a phrase for the role. */
 let goalDraft=null;
 const relLabel=r=>r.role+(r.name?' '+r.name:'');
@@ -1797,7 +1803,6 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
   else if(a==='role')S.role=v;
   else if(a==='sex')S.sex=S.sex===v?'':v;
   else if(a==='gneither')S.sex=S.sex==='Neither'?'':'Neither';
-  else if(a==='gborn'){S.born=S.born===v?'':v;if(S.born&&!S.bornWhy)S.bornWhy='who'}
   else if(a==='gwhy')S.bornWhy=v;
   else if(a==='sign'){const i=SIGNS.findIndex(x=>x[0]===v);const start=SIGNS[i][1];const len=(SIGNS[(i+1)%12][1]-start+360)%360;const doy=((start+1+rnd(len-4)-1)%360)+1;const m=Math.ceil(doy/30);S.birth={m,d:doy-(m-1)*30}}
   else if(a==='cusp')S.cuspPick=v;
@@ -1868,6 +1873,9 @@ document.addEventListener('change',ev=>{const el=ev.target;
  if(el.dataset.title!==undefined){S.title=el.value.trim();render();return}
  if(el.dataset.cover){S.cover=el.value.trim();render();return}
  if(el.dataset.bornshow){S.bornShow=el.checked;render();return}
+ if(el.dataset.gneither){S.sex=el.checked?'Neither':'';render();return}
+ if(el.dataset.gborn){S.born=el.checked?(S.sex==='Neither'?(S.bornPick||'Male'):S.sex==='Male'?'Female':'Male'):'';if(S.born&&!S.bornWhy)S.bornWhy='who';render();return}
+ if(el.dataset.gbornpick){S.bornPick=el.value;if(S.born)S.born=el.value;render();return}
  if(el.dataset.gtie!==undefined){const g=S.goals[+el.dataset.gtie];if(g){const r=el.value&&relRef(el.value);if(r){g.rel=el.value;g.relLabel=relPick(r)}else if(!el.value){delete g.rel;delete g.relLabel}}render();return}
  if(el.dataset.rname||el.dataset.rsex!==undefined||el.dataset.rnote){const r=relRef(el.dataset.rname||el.dataset.rsex||el.dataset.rnote);if(r){if(el.dataset.rname)r.name=el.value.trim();else if(el.dataset.rnote)r.meta.rNote=el.value.replace(/\s+/g,' ').trim().slice(0,300);else r.meta.rSex=el.value}render();return}
  if(el.dataset.bhand){S.birthHand=el.checked;if(el.checked){if(!S.birthMine)S.birthMine=S.birth?{m:S.birth.m,d:S.birth.d}:{m:0,d:0};birthFromMine()}render();return}
