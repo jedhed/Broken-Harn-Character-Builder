@@ -289,7 +289,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-16';
+const APPVER='2026.10.17-17';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -1007,7 +1007,7 @@ function namePanel(){const ev=everyday(),fm=formalName();
 function relCard(key){const r=relRef(key);if(!r)return'';const m=r.meta,id=key.replace(/\W/g,'_'),nm=r.name,sx=m.rSex||'';
  return`<div class="relcard"><div class="lab"><span><b>${esc(r.role)}${nm?' · '+esc(nm):''}</b> <span class="hint">${esc(r.from)}</span></span>${r.own!==undefined?`<button class="link sm" data-act="rdel" data-val="${r.own}">Remove</button>`:''}</div>
  <div class="chips">${ROLES4.map(x=>chip(x,r.role===x,'rrole',key+'|'+x)).join('')}</div>${r.role?`<span class="hint">${ROLEDESC[r.role]||''}</span>`:''}
- <div class="chips"><input class="text" style="width:auto;flex:1;min-width:10em" id="rn_${id}" data-rname="${key}" value="${esc(nm)}" placeholder="Their name" aria-label="Name"><select data-rsex="${key}" aria-label="Their sex"><option value="" ${sx?'':'selected'}>Not stated</option><option value="Male" ${sx==='Male'?'selected':''}>Male</option><option value="Female" ${sx==='Female'?'selected':''}>Female</option></select>${rollBtn('rname:'+key,'Roll a name')}</div>
+ <div class="chips"><input class="text" style="width:auto;flex:1;min-width:10em" id="rn_${id}" data-rname="${key}" value="${esc(nm)}" placeholder="Their name" aria-label="Name"><select data-rsex="${key}" aria-label="Their gender"><option value="Male" ${sx==='Male'?'selected':''}>Male</option><option value="Female" ${sx==='Female'?'selected':''}>Female</option><option value="Neither" ${sx==='Neither'?'selected':''}>Neither</option><option value="" ${sx?'':'selected'}>Not stated</option></select>${rollBtn('rname:'+key,'Roll a name')}</div>
  <div class="chips"><button class="btn" data-act="rgoal" data-val="${key}">Make a goal from this</button></div>
  <textarea class="text" rows="2" maxlength="300" id="rt_${id}" data-rnote="${key}" placeholder="${r.sug?'This event suggests a romance. Who were they to you?':'Notes: who they are to you, how it stands now'}" aria-label="Notes on this relationship">${esc(m.rNote||'')}</textarea><span class="hint rcnt" id="rc_${id}"></span></div>`}
 function tgPanel(){const tr=S.traits,full=tr.length>=3;const sw=signWords();const desc=S.abil.map(a=>a.desc).filter(Boolean);
@@ -1125,7 +1125,7 @@ function rollFather(){const s=nameSet(true);S.father=rollPart(s.given,s.cult)}
 function nameTail(){const p=patronymic();if(elder()||!S.clan)return p?' '+p:'';if(thrall())return', thrall of clan '+S.clan;if(ivName())return(p?' '+p:'')+', of clan '+S.clan;return(S.cls==='noble'?' ':' of ')+S.clan}
 function rollClan(){const s=nameSet();if(ivClan()&&S.place&&S.ivc!=='minor'&&S.ivc!=='ind')S.clan=ivGreatClan();else if(s.clan)S.clan=rollPart(s.clan,s.cult);S.clanAuto=S.clan}
 /* A name for someone in the character's life: same culture and rules as the character's own. Their sex is weighted by the character's: a man's acquaintances are mostly men (80%), a woman's lean to women (60%). */
-function npcName(force){const fem=force==='Female'?true:force==='Male'?false:S.sex==='Male'?rnd(100)<=20:S.sex==='Female'?rnd(100)<=60:rnd(2)===1;npcName.last=fem?'Female':'Male';const s=nameSet(true);const key=s.given.split('+').map(x=>x.slice(0,-1)+(fem?'w':'m')).join('+');
+function npcName(force){const fem=force==='Female'?true:force==='Male'?false:force==='Neither'?rnd(2)===1:S.sex==='Male'?rnd(100)<=20:S.sex==='Female'?rnd(100)<=60:rnd(2)===1;npcName.last=fem?'Female':'Male';const s=nameSet(true);const key=s.given.split('+').map(x=>x.slice(0,-1)+(fem?'w':'m')).join('+');
  const g=rollPart(key,s.cult);if(elder()||!s.clan)return g;const clan=ivClan()?ivGreatClan():rollPart(s.clan,s.cult);
  if(ivNative()){const f=rollPart(s.given,s.cult);return g+' '+f+(fem?'dedt':'sen')+', of clan '+clan}return g+' of '+clan}
 const allyText=i=>{const a=S.allies[i],n=(S.allyNames||[])[i];if(!n)return a;const[k,w]=a.split(': ');return k+': '+n+', '+w};
@@ -1133,7 +1133,7 @@ const allyList=()=>[...(S.allies||[]).map((_,i)=>allyText(i)),...(S.ownRel||[]).
 /* Notes the player wrote about people, as [who, note]. */
 const relNotes=()=>relKeys().map(relRef).filter(r=>r&&(r.meta.rNote||'').trim()).map(r=>[r.role+(r.name?' '+r.name:''),r.meta.rNote.trim()]);
 const relText=l=>l.rel?'a '+l.rel.toLowerCase()+(l.relName?', '+l.relName:''):'';
-/* Relationships: one card each on Traits, relationships & goals, for a life event's "someone", a person from the travel roll, or one the player adds (S.ownRel). Each has a sex (Male, Female or "" for not stated) that name rolls follow, and short notes, kept as rSex and rNote. */
+/* Relationships: one card each on Traits, relationships & goals, for a life event's "someone", a person from the travel roll, or one the player adds (S.ownRel). Each has a gender (Male, Female, Neither or "" for not stated) that name rolls follow, and short notes, kept as rSex and rNote. */
 /* Characters saved with the short-lived romance setting (rRom) have it folded into the start of their notes. */
 function foldRom(st){const one=m=>{if(m&&m.rRom){const t=m.rRom==='current'?'Current lover.':'Former lover.';m.rNote=(t+' '+(m.rNote||'')).trim().slice(0,300);delete m.rRom}};if(!st)return;Object.values(st.life||{}).forEach(one);(st.allyMeta||[]).forEach(one);(st.ownRel||[]).forEach(one)}
 const ROLES4=['Friend','Patron','Rival','Adversary'];
@@ -1145,9 +1145,9 @@ function relRef(key){const i=key.indexOf(':'),k=key.slice(0,i),x=key.slice(i+1);
   return{key,meta:m,get role(){return S.allies[n].split(': ')[0]},set role(v){S.allies[n]=v+': '+who()},get name(){return(S.allyNames||[])[n]||''},set name(v){(S.allyNames||(S.allyNames=[]))[n]=v},from:'Your travels: '+who(),sug:false}}
  const o=(S.ownRel||[]).find(r=>r.id===x);if(!o)return null;return{key,meta:o,get role(){return o.role},set role(v){o.role=v},get name(){return o.name||''},set name(v){o.name=v},from:'Added by you',sug:false,own:o.id}}
 const relKeys=()=>[...LIFET.filter(([t])=>S.life[t]&&S.life[t].rel).map(([t])=>'life:'+t),...(S.allies||[]).map((_,i)=>'ally:'+i),...(S.ownRel||[]).map(o=>{if(!o.id)o.id=newId();return'own:'+o.id})];
-/* A rolled name follows the person's sex if set. */
-function rollRelName(key){const r=relRef(key);if(!r)return;const m=r.meta;r.name=npcName(m.rSex||'');m.rSex=npcName.last}
-/* ♂/♀ beside a name on Life events and Kin & travel: shows the person's sex; click to set it, click again to clear (Not stated). */
+/* A rolled name follows the person's gender if set; Neither draws from both name lists and stays Neither. */
+function rollRelName(key){const r=relRef(key);if(!r)return;const m=r.meta;r.name=npcName(m.rSex||'');if(m.rSex!=='Neither')m.rSex=npcName.last}
+/* ♂/♀ beside a name on Life events and Kin & travel: shows the person's gender (Male or Female; Neither is set on their card); click to set it, click again to clear (Not stated). */
 const sexBtns=key=>{const r=relRef(key),x=r&&r.meta.rSex||'';return[['Male','♂'],['Female','♀']].map(([v,g])=>`<button class="chip rsx" aria-pressed="${x===v}" data-act="rsex" data-val="${key}|${v}" aria-label="${v}" title="${v}">${g}</button>`).join('')};
 /* Goals tied to a relationship keep its key (g.rel) and a label in case the person is later removed. "Make a goal from this" starts the builder with a phrase for the role. */
 let goalDraft=null;
@@ -1260,7 +1260,7 @@ function issues(){const I={0:[],1:[],2:[],3:[],4:[],6:[],8:[],9:[],10:[],11:[],1
  {tongues().O.forEach(([st,m])=>I[st].push(m))}
  {const c=cdef();if(c){if(!c.magic&&S.occ2&&!(c.occ||[]).includes(S.occ2))I[9].push(S.occ2+' is not a '+S.career+' specialty. Choose one from the list under Career.');careerDupLangs().forEach(n=>I[9].push(n+' is already one of your languages, so this Lore of the trade adds nothing. Choose another language, a -wise, or Add '+c.cw[1]+' to '+n+'.'));CATS.forEach(k=>{if(poolLeft(k)<0)I[9].push(k+' is overspent by '+(-poolLeft(k))+'. Take points back.')});Object.entries(S.cp).forEach(([x,n])=>{const over=n?(ledger().led[x].reduce((a,p)=>a+p[0],0)-70):0;if(over>0)I[9].push(x+' is '+over+' over the cap of 70. Take '+over+' career points back or they are lost.')});c.picks.forEach((_,i)=>{if(S.ctal[i]&&!talentOpts(i).includes(S.ctal[i]))I[9].push(S.ctal[i]+' is not a Talent this career offers. Choose again.')});if(c.magic){BINDS.forEach(b=>{const t=(ledger().led['Bind: '+b]||[]).reduce((a,q)=>a+q[0],0);if(t>70)I[9].push('Bind: '+b+' is '+(t-70)+' over the cap of 70. Take points back.')});STRANDS.forEach(x=>{if(strandLv(x)>5&&(S.sw.sl[x]||S.sw.sx[x]))I[9].push('Strand: '+x+' is above level 5. Take a level back.')})}}}
  LIFET.forEach(([t,n])=>{const l=S.life[t];if(l&&l.pick&&!optionsFor(lifeEv(t)).includes(l.pick))I[8].push('Your '+n+' reward no longer matches the career you have in mind. Choose it again.')});
- if(S.career==='Godbound'&&!roleAllowed(S.role))I[6].push(S.role==='order'?'Halea\'s fighting order, the Sólithar, takes only men. Choose another place in the faith or change sex on the Sketch tab.':'Only women are ordained in Halea\'s church. Choose another place in the faith or change sex on the Sketch tab.');const c=culture();
+ if(S.career==='Godbound'&&!roleAllowed(S.role))I[6].push(S.role==='order'?'Halea\'s fighting order, the Sólithar, takes only men. Choose another place in the faith or change gender on the Sketch tab.':'Only women are ordained in Halea\'s church. Choose another place in the faith or change gender on the Sketch tab.');const c=culture();
  if(S.nation==='evael'&&S.folk!=='Sindarin')I[1].push('Evael is a Sindarin realm. Choose another birthplace or change folk.');
  if(S.nation&&S.place&&!NAT[S.nation].places.some(p=>p.name===S.place))I[1].push('The settlement no longer matches the nation.');
  if(ivClan()&&S.cls&&!S.ivc)I[2].push('Ivinia uses clan status instead of class. Choose thrall, minor clan, greatclan or independent.');
@@ -1438,7 +1438,7 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
   <div class="field"><div class="lab"><span><b>Folk</b> <span class="hint">nearly everyone on Hârn is human; the GM decides whether the elder folk can be played</span></span></div>
   <div class="cards">${[['Human','The peoples of the kingdoms and the tribal nations.'],['Sindarin','The elves of Evael. Few, long-lived, and seldom seen abroad.'],['Khuzdul','The dwarves of Azadmere. Makers and miners.']].map(([f,t])=>{const lock=f!=='Human'&&!GM[f];return`<button class="card" aria-pressed="${S.folk===f}" data-act="folk" data-val="${f}" ${lock?'disabled':''}><span class="tag ${lock?'lock':''}">${lock?'Locked by the GM':f==='Human'?'Usual choice':'Unlocked'}</span><h3>${f}</h3><span>${t}</span></button>`}).join('')}</div>
   ${GM.Sindarin||GM.Khuzdul?'<span class="hint">Traits for the elder folk aren\'t written yet, so later steps treat them much like humans for now.</span>':''}</div>
-  <div class="field"><div class="lab"><b>Sex</b>${rollBtn('sex','Roll d100')}</div><div class="chips">${['Female','Male'].map(x=>chip(x,S.sex===x,'sex',x)).join('')}</div><span class="hint">Your choice. It matters for a few church offices, such as Halea's.</span></div>
+  <div class="field"><div class="lab"><b>Gender</b>${rollBtn('sex','Roll d100')}</div><div class="chips">${['Female','Male'].map(x=>chip(x,S.sex===x,'sex',x)).join('')}</div><span class="hint">Your choice. It matters for a few church offices, such as Halea's.</span></div>
   <div class="field"><div class="lab"><b>Age</b></div><div class="chips">${['Young','Adult','Old'].map(a=>chip(a,S.age===a,'age',a)).join('')}</div><div class="result"><b>${S.age}.</b> ${ageTxt[S.age]} <span class="hint">These points are spent on Rounding out.</span></div>
    <div class="agerow"><label for="years"><b>Age in years</b></label><input type="range" id="years" data-years min="${AGE_R[S.age][0]}" max="${AGE_R[S.age][1]}" step="1" value="${ageYears()}"><output id="yearsOut" for="years">${ageYears()}</output>${rollBtn('years','Roll an age')}</div>
    <span class="hint"><span id="bornOut">${bornLine()}</span> · Age as of ${campTxt()}.</span></div>
