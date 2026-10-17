@@ -148,7 +148,11 @@ dd{margin:0}
 .row span:last-child{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
 .row small{color:var(--muted);font-size:12px}
 .rows.stripe{gap:0}.rows.stripe .row{padding:2px 6px}.rows.stripe .row:nth-child(odd){background:var(--panel)}
+.about{border-top:1px solid var(--muted);padding-top:10px;margin-top:auto}
+.about p{margin:0 0 6px;max-width:75ch}
+.about .ver{font-weight:700}
 details.calls{border-top:1px solid var(--muted);padding-top:10px;margin-top:auto}
+.about+details.calls{margin-top:4px}
 details.calls summary{cursor:pointer;font-weight:700}
 details.calls ol{color:var(--muted);max-width:75ch;padding-left:22px}
 .gm{position:relative}
@@ -256,6 +260,13 @@ td b{font:700 17.5px var(--head)}
       <div id="sheet" style="display:flex;flex-direction:column;gap:14px"></div>
     </aside>
   </div>
+  <div class="about">
+    <p class="ver" id="appver"></p>
+    <p class="hint">HârnWorld was created by N. Robin Crossby, and Hârn material is published by Columbia Games and Kelestia Productions. The place names, peoples, faiths and other setting details used in this tool come from HârnWorld material and belong to their owners.</p>
+    <p class="hint">The Broken Empires RPG was written and designed by Trevor Devall. The Broken Empires RPG® is a registered trademark of Evil Baby Entertainment LLC. © 2026 Evil Baby Entertainment LLC. All rights reserved. Published by Black Cradle Press LLC. The character sheet this tool fills in is the official Broken Empires RPG character sheet.</p>
+    <p class="hint">Set in Grenze and Bitter, used under the SIL Open Font License.</p>
+    <p class="hint">This is an unofficial fan tool created by John McClure and is not affiliated with Columbia Games, Kelestia Productions, Evil Baby Entertainment or Black Cradle Press.</p>
+  </div>
   <details class="calls">
     <summary>Rules this prototype applies</summary>
     <p class="hint">Spellweavers use the rulebook's rules unchanged. A Shek-Pvar convocation is a house within the order and changes no numbers. An Origin roll skips three events that need noble birth and, for a Slave or Serf, five that need a free family. When an Origin event implies a different parentage, you choose whether to change it or explain both. Each sunsign gives +10 to one skill and +5 to two more. Divinity belongs to no sign, since piety comes from the gods and not the stars. For a Spellweaver the sign also gives an Affinity (+1 Mastery when casting with that Strand) and an Impedance (+1 TC), drawn from six Strands: Plants, Earth, Fire, Air, Thought and Water. Beasts, Body, Spheres and Spirit belong to no sign. Someone born on a cusp takes the Affinity and Impedance of the sign they chose. Tribal tongues are named for the nation: ten are Jarin dialects, six are Hârnic dialects, the Kamaki speak Kamakin and the Solori an Azeri tongue. A dialect speaker understands the parent language at 20 less. A family whose tongue is a dialect of the language you were raised in costs nothing in language; only the two -wises split. Gargun is offered as a second language to the Ymodi, Pagaelin, Tulwyn, Equani and Kabloqui.</p>
@@ -263,7 +274,10 @@ td b{font:700 17.5px var(--head)}
 </div>
 
 <script>
+/* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
+const APPVER='2026.10.17-2';
 const $=s=>document.querySelector(s);
+$('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
 const dice=(n,s)=>{let t=0;for(let i=0;i<n;i++)t+=rnd(s);return t};
 const parse=s=>s.split(',').map(p=>{const[a,w]=p.split(':');return{name:a,w:+w}});
