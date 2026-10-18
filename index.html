@@ -1538,18 +1538,22 @@ const SAVEKEY='broken-harn:current',STOREKEY='broken-harn:characters';let saveOK
 let CHARS=[],CUR=null,VIEW='start',pendingDel=null,finMsg=null;
 const newId=()=>'c'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);
 const strip=o=>JSON.stringify({...o,step:0,lastIn:0});
-const summary=()=>({career:S.career?careerLine():'',born:S.place?(S.nation==='tribal'?'Among the '+esc(S.place):esc(S.place)+', '+NAT[S.nation].name):'',done:ORDER.filter(i=>done(i)&&!(issues()[i]||[]).length).length});
+/* The steps still to do: not done, or done with a warning. The one rule behind the start screen's progress, the PDF button and the Finish notice. */
+function stepsTodo(){const I=issues();return ORDER.filter(i=>!done(i)||(I[i]||[]).length)}
+const summary=()=>({career:S.career?careerLine():'',born:S.place?(S.nation==='tribal'?'Among the '+esc(S.place):esc(S.place)+', '+NAT[S.nation].name):'',done:ORDER.length-stepsTodo().length});
 let saveFull=false;
 /* Several tabs can be open on the app at once. Before each save, characters saved by another tab are merged in (the newer copy of each wins) and characters deleted in another tab are dropped, so one tab never wipes out another's work. Other tabs pick up each save as it happens. */
 const GONE=new Set();let syncing=false;
 function syncList(d){const gone=new Set([...(Array.isArray(d.gone)?d.gone:[]),...GONE]);const open=VIEW==='char'&&CUR;if(open)gone.delete(CUR);CHARS=CHARS.filter(c=>!gone.has(c.id));
- (Array.isArray(d.list)?d.list:[]).forEach(o=>{if(!o||!o.id||!o.S||typeof o.S!=='object'||Array.isArray(o.S)||gone.has(o.id))return;const m=CHARS.find(c=>c.id===o.id);if(!m){CHARS.push(o);return}if((o.saved||0)<=(m.saved||0))return;Object.assign(m,o);if(open&&o.id===CUR){const st=S.step,li=S.lastIn;S=Object.assign(blank(),JSON.parse(JSON.stringify(o.S)));S.step=st;S.lastIn=li}});return gone}
+ (Array.isArray(d.list)?d.list:[]).forEach(o=>{if(!o||!o.id||!o.S||typeof o.S!=='object'||Array.isArray(o.S)||gone.has(o.id))return;const m=CHARS.find(c=>c.id===o.id);if(!m){CHARS.push(o);return}if((o.saved||0)<=(m.saved||0))return;Object.assign(m,o);if(open&&o.id===CUR){const st=S.step,li=S.lastIn;useSaved(o.S,o.name);S.step=st;S.lastIn=li}});return gone}
 function store(){if(syncing)return;try{let d=null;try{d=JSON.parse(localStorage.getItem(STOREKEY)||'null')}catch(e){}const gone=d&&d.v===2?syncList(d):new Set(GONE);localStorage.setItem(STOREKEY,JSON.stringify({v:2,list:CHARS,current:CUR,GM,gone:[...gone].slice(-500)}));GONE.clear();saveOK=true;saveFull=false}catch(e){saveOK=false;saveFull=!!e&&(e.name==='QuotaExceededError'||e.code===22||e.name==='NS_ERROR_DOM_QUOTA_REACHED')}}
 function saveNow(){if(VIEW==='char'&&CUR){const e=CHARS.find(c=>c.id===CUR);if(e){const nm=currentName();if(!e.S||strip(e.S)!==strip(S)||e.name!==nm)e.saved=Date.now();e.name=nm;if(e.copy&&e.name!==e.copy.name)delete e.copy;e.S=JSON.parse(JSON.stringify(S));e.sum=summary()}}
  store();const n=$('#savenote');n.textContent=saveOK?'Saved in this browser':saveFull?'Not saved: this browser\'s storage is full. Remove a portrait, or download and delete old characters.':'Not saved: this browser is blocking storage';n.classList.toggle('bad',!saveOK)}
 function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STOREKEY)||'null');if(d&&d.v===2&&Array.isArray(d.list)){CHARS=d.list.filter(c=>c&&c.id&&c.S&&typeof c.S==='object');CHARS.forEach(c=>foldRom(c.S));CUR=CHARS.some(c=>c.id===d.current)?d.current:null;Object.assign(GM,d.GM||{});return}}catch(e){}
  try{const d=JSON.parse(localStorage.getItem(SAVEKEY)||'null');if(d&&d.v===1&&d.S&&typeof d.S==='object'){Object.assign(GM,d.GM||{});const id=newId();CHARS=[{id,name:d.name||'',S:d.S,saved:Date.now(),sum:null}];CUR=id}}catch(e){}}
-function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;foldRom(e.S);S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));if(!('orbLang' in e.S))S.orbLang='Ivinian';if(!S.nameV)migrateName(e.name);fixSw();$('#name').value=currentName();CUR=id;VIEW='char';viewPhase=null;pendingDel=null;return true}
+/* Turn a saved character into the working one, with the upgrades for characters saved by older versions (romance notes, the Orbaal family tongue, the name, the Spellweaver path). Used wherever a saved character is opened, downloaded or checked, so they all agree. */
+function useSaved(saved,name){foldRom(saved);S=Object.assign(blank(),JSON.parse(JSON.stringify(saved)));if(!('orbLang' in saved))S.orbLang='Ivinian';if(!S.nameV)migrateName(name);fixSw()}
+function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;useSaved(e.S,e.name);$('#name').value=currentName();CUR=id;VIEW='char';viewPhase=null;pendingDel=null;return true}
 function addChar(roll){S=blank();S.step=ORDER[0];if(roll)rollAll();const id=newId();S.nameV=2;const nm=roll&&canName()?fullName():'';CHARS.unshift({id,name:nm,S:JSON.parse(JSON.stringify(S)),saved:Date.now(),sum:null});$('#name').value=nm;CUR=id;VIEW='char';viewPhase=null;pendingDel=null}
 /* Duplicate a character, portrait and all. The list shows "(copy)" after the copy's name until it is renamed; the label never reaches the sheet or the files. If storage is full the copy is dropped and dupMsg says why. */
 let dupMsg=null;
@@ -1615,7 +1619,7 @@ function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();con
  const data=b64(JSON.stringify({v:1,name:name||'',S,camp:{d:GM.d,m:GM.m,y:GM.y}})).replace(/(.{76})/g,'$1\n');
  L.push('<!-- broken-harn-data v1','This block lets Broken Hârn: Character Builder open this file again. Leave it as it is.',data,'-->','');
  return L.join('\n')}
-function mdFor(id){if(VIEW==='char'&&id===CUR)return{name:currentName(),md:charMd(currentName())};const e=CHARS.find(c=>c.id===id);if(!e)return null;const keep=S;try{S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));return{name:e.name,md:charMd(e.name)}}finally{S=keep}}
+function mdFor(id){if(VIEW==='char'&&id===CUR)return{name:currentName(),md:charMd(currentName())};const e=CHARS.find(c=>c.id===id);if(!e)return null;const keep=S;try{useSaved(e.S,e.name);return{name:e.name,md:charMd(e.name)}}finally{S=keep}}
 let DL=null;try{if(window.claude&&window.claude.use)window.claude.use('downloads').then(d=>{DL=d}).catch(()=>{})}catch(e){}
 function download(id){const r=mdFor(id);if(!r)return;const fn=fileName(r.name);const say=m=>{if(VIEW==='start'){listNote=m;const n=$('#listnote');if(n)n.textContent=m;return}const n=$('#dlnote');if(n)n.textContent=m};
  if(DL){DL.save({filename:fn,data:r.md}).then(()=>say('Downloaded '+fn)).catch(e=>{if(!e||e.code!=='declined')say('The download did not go through. Try again.')});return}
@@ -1737,8 +1741,8 @@ async function makePdf(name){const[L,buf]=await Promise.all([loadPdfLib(),loadSh
  try{await addPage3(doc,L,F,safe,name)}catch(e){lost.push('page 3 ('+(e&&e.message||'error')+')')}
  return{bytes:await doc.save({updateFieldAppearances:false}),lost}}
 /* A PDF is the sheet for play, so it waits until every step is done with no warnings (the Finish test), unless the GM allows drafts. */
-function withChar(id,fn){if(VIEW==='char'&&id===CUR)return fn();const e=CHARS.find(c=>c.id===id);if(!e)return null;const keep=S;try{S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));return fn()}finally{S=keep}}
-const stepsLeft=id=>withChar(id,()=>{const I=issues();return ORDER.filter(i=>!done(i)||(I[i]||[]).length).length});
+function withChar(id,fn){if(VIEW==='char'&&id===CUR)return fn();const e=CHARS.find(c=>c.id===id);if(!e)return null;const keep=S;try{useSaved(e.S,e.name);return fn()}finally{S=keep}}
+const stepsLeft=id=>withChar(id,()=>stepsTodo().length);
 const pdfOk=id=>!!GM.pdfDraft||stepsLeft(id)===0;
 const pdfWhy=id=>'PDF available when finished';
 let pdfBusy=false,listNote='';
@@ -1747,7 +1751,7 @@ async function downloadPdf(id){const fromList=VIEW==='start';id=id||CUR;const e=
  const nm=fromList?(e.name||''):currentName();const fn=fileName(nm).replace(/\.md$/,'.pdf');
  const say=m=>{if(fromList){listNote=m;const n=$('#listnote');if(n)n.textContent=m}else{const n=$('#dlnote');if(n)n.textContent=m}};
  const btn=fromList?null:$('#pdfbtn');pdfBusy=true;if(btn)btn.disabled=true;if(fromList)render();say('Preparing PDF…');
- const keep=S;let r;try{if(fromList)S=Object.assign(blank(),JSON.parse(JSON.stringify(e.S)));r=await makePdf(nm)}catch(err){r=null}finally{if(fromList)S=keep}
+ const keep=S;let r;try{if(fromList)useSaved(e.S,e.name);r=await makePdf(nm)}catch(err){r=null}finally{if(fromList)S=keep}
  if(!r){say('The PDF could not be made. Check your connection and try again.');pdfBusy=false;if(fromList)render();else pdfGate();return}
  const done=()=>say('Downloaded '+fn+(r.lost.length?'. '+r.lost.length+(r.lost.length===1?' entry':' entries')+' did not fit in Notes and were left off: '+r.lost.join('; ')+'.':''));
  try{if(DL){await DL.save({filename:fn,data:r.bytes});done()}else{const u=URL.createObjectURL(new Blob([r.bytes],{type:'application/pdf'}));const a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);done()}}
@@ -1783,7 +1787,7 @@ document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');i
  if(a==='dup'){const fromChar=VIEW==='char',id=dupChar(v||CUR);if(id&&fromChar){openChar(id);window.scrollTo(0,0)}render();if(!id&&fromChar&&dupMsg){const n=$('#savenote');n.textContent=dupMsg;n.classList.add('bad')}return}
  if(a==='pdf'){downloadPdf(v);return}
  if(a==='pickfile'){const f=$('#filein');f.value='';f.click();return}
- if(a==='finish'){const I=issues();saveNow();finMsg={id:CUR,name:$('#name').value.trim()||'Your character',todo:ORDER.filter(i=>!done(i)||(I[i]||[]).length).map(i=>STEPS[i])};VIEW='start';pendingDel=null;loadMsg=null;render();window.scrollTo(0,0);return}
+ if(a==='finish'){const todo=stepsTodo();saveNow();finMsg={id:CUR,name:$('#name').value.trim()||'Your character',todo:todo.map(i=>STEPS[i])};VIEW='start';pendingDel=null;loadMsg=null;render();window.scrollTo(0,0);return}
  if(a==='chars'){finMsg=null;VIEW='start';pendingDel=null;loadMsg=null;render();window.scrollTo(0,0);return}
  if(a==='newchar'||a==='rollchar'){finMsg=null;addChar(a==='rollchar');render();window.scrollTo(0,0);return}
  if(a==='open'){finMsg=null;dupMsg=null;openChar(v);render();window.scrollTo(0,0);return}
