@@ -290,7 +290,7 @@ td b{font:700 17.5px var(--head)}
 
 <script>
 /* The app's version: the date of the change, then a counter for that day. Bump it with every commit. */
-const APPVER='2026.10.17-20';
+const APPVER='2026.10.18-1';
 const $=s=>document.querySelector(s);
 $('#appver').textContent='Version '+APPVER;
 const rnd=n=>Math.floor(Math.random()*n)+1;
@@ -599,7 +599,6 @@ const CHANTRIES=[['Gelimo','Melderyn','Fyvria','melderyn'],['Glenoth','Melderyn'
  ['Kolomir','Karejia','Fyvria',''],['Kotyn','Molkura','*',''],['Lekuria','Umelria','Lyahvi',''],['Lysara','Azeryan','Peleahn',''],['Makjin','Diramoa','Fyvria',''],['Manquideh','Dalkesh','Lyahvi',''],['Meokolis','Azeryan','Savorya',''],['Mokono','Meluria','Jmorvi',''],['Mokora','Chogoro / Mafan','Jmorvi',''],
  ['Orlet','Quarphor','Fyvria',''],['Phanosia','Karejia','Jmorvi',''],['Porosua','Azeryan','Odivshe',''],['Reshana','Azeryan','Lyahvi',''],['Silgora','Falania / Hepekeria','Jmorvi',''],['Tengela','Trierzon','Lyahvi',''],['Thubeliz','Falania / Hepekeria','Peleahn',''],['Ulebed','Kaneum','Savorya',''],
  ['Xerium','Hepekeria','Savorya',''],["'Ydei",'Shoju','Jmorvi',''],['Zerexa','Kaneum','Peleahn Lyahvi',''],['Zerula','Dalkesh','Peleahn Savorya','']];
-const CHMAP=Object.fromEntries(CHANTRIES.map(c=>[c[0],c]));
 const ARCANE={Alchemist:'Alchemy',Astrologer:'Astrology',Invoker:'Invocation',Runemaster:'Rune',Tarotist:'Tarot',Psionicist:'Psionics',Shaman:'Shamanism'};
 const isSw=()=>S.career==='Spellweaver';const arcanist=()=>isSw()&&S.swPath==='arcanist';
 const convOf=()=>CONVS.includes(S.occ2)?S.occ2:'';
@@ -650,7 +649,7 @@ function magicPanel(){const w=S.sw;const stp=(act,x,n,up,lbl)=>`<button class="b
   <div class="field"><div class="lab"><label for="swname"><b>True Name</b> <span class="hint">in the language of your people. Guard it.</span></label></div><input class="text" id="swname" data-sw="name" value="${esc(w.name)}" placeholder="The name the Pattern gave you"></div></div>`}
 function swDone(){const w=S.sw;return w.binds.length===2&&w.strands.length===4&&w.thin.length===2&&sum(w.bp)===100&&sum(w.sl)===10&&sum(w.sx)===3&&!!w.ex&&!!w.thread}
 const CATS=Object.keys(CAT);
-const cdef=()=>{const c=CAREER[S.career];return c&&!c.pending?c:null};
+const cdef=()=>CAREER[S.career]||null;
 function baseVal(x){return Math.min(70,(ledger().led[x]||[]).filter(p=>p[1]!=='career').reduce((a,p)=>a+p[0],0))}
 const spent=cat=>CAT[cat].reduce((a,x)=>a+(S.cp[x]||0),0);
 const poolLeft=cat=>{const c=cdef();return c?c.pool[CATS.indexOf(cat)]-spent(cat):0};
@@ -659,7 +658,6 @@ function talentOpts(i){const c=cdef();return c.picks[i].flatMap(t=>t[0]==='='?[t
 function careerTalents(){const c=cdef();if(!c)return[];return[...c.fixed,...S.ctal.slice(0,c.picks.length).filter(Boolean)].filter(n=>n!==S.cswap)}
 /* Adding to a tongue or -wise stops at 70. A gain that would be lost entirely is noted in O, and flagged on its step. A -wise named twice adds to the one already there. */
 const findW=(W,n)=>W.find(w=>w[0].toLowerCase()===n.toLowerCase());
-function addTo(e,v,O,src,label){if(e[1]>=70){O.push([src,label+': '+e[0]+' is already 70, so this adds nothing. Choose something else.']);return}e[1]=Math.min(70,e[1]+v)}
 function careerTongues(L,W,O){O=O||[];const c=cdef();if(!c)return;swWises(W);const v=c.cw[1];if(S.career==='Godbound'&&S.deity)W.push([S.deity+'-wise',30,'career']);
  S.cw.slice(0,c.cw[0]).forEach(x=>{if(x.mode==='wise'&&x.name){const n=x.name.replace(/-wise$/i,'')+'-wise';const e=findW(W,n);if(e){if(e[1]>=70)O.push([9,'A new -wise named “'+n+'” adds nothing: you already have '+e[0]+' at 70. Change that choice under Lore of the trade, below.']);else e[1]=Math.min(70,e[1]+v)}else W.push([n,v,'career'])}else if(x.mode.startsWith('lang:')){const n=x.mode.slice(5);if(!L.some(l=>l[0]===n))L.push([n,v,'career'])}else if(x.mode.startsWith('add:')){const n=x.mode.slice(4);const e=L.find(l=>l[0]===n)||W.find(w=>w[0]===n);if(e){if(e[1]>=70)O.push([9,'“Add '+v+' to '+n+'” adds nothing: '+n+' is already 70. Change that choice under Lore of the trade, below.']);else e[1]=Math.min(70,e[1]+v)}}})}
 /* A career language the character already speaks (say, chosen before the birthplace changed) is left off the sheet and flagged on the Career step. */
@@ -687,7 +685,7 @@ function roPools(extraKey,extra){const r=S.ro;const t={Combat:0,Adventuring:0,So
 const roOk=(cat,amt)=>roPools(cat,amt).free>=0;
 const total=x=>(ledger().led[x]||[]).reduce((a,p)=>a+p[0],0);
 const tongueVal=n=>{const t=tongues();const e=t.L.find(l=>l[0]===n)||t.W.find(w=>w[0]===n);return e?e[1]:0};
-function roTongues(L,W,O){O=O||[];S.ro.neww.forEach(x=>{if(x.mode==='wise'&&x.name){const n=x.name.replace(/-wise$/i,'')+'-wise';const e=findW(W,n);if(e)addTo(e,20,O,10,'New -wise');else W.push([n,20,'rounding out'])}else if(x.mode.startsWith('lang:')){const n=x.mode.slice(5);if(L.some(l=>l[0]===n))O.push([10,'You already speak '+n+', so buying it as a new language adds nothing. Choose another or remove it.']);else L.push([n,20,'rounding out'])}});
+function roTongues(L,W,O){O=O||[];S.ro.neww.forEach(x=>{if(x.mode==='wise'&&x.name){const n=x.name.replace(/-wise$/i,'')+'-wise';const e=findW(W,n);if(e){if(e[1]>=70)O.push([10,'A new -wise named “'+n+'” adds nothing: you already have '+e[0]+' at 70. Change that choice under -wises and languages, below.']);else e[1]=Math.min(70,e[1]+20)}else W.push([n,20,'rounding out'])}else if(x.mode.startsWith('lang:')){const n=x.mode.slice(5);if(L.some(l=>l[0]===n))O.push([10,'“New language: '+n+'” adds nothing: you already speak '+n+'. Change that choice under -wises and languages, below.']);else L.push([n,20,'rounding out'])}});
  Object.entries(S.ro.pts).forEach(([k,n])=>{if(k[0]!=='@'||!n)return;const e=L.find(l=>l[0]===k.slice(1))||W.find(w=>w[0]===k.slice(1));if(!e)return;const over=e[1]+n-70;if(over>0)O.push([10,e[0]+' is '+over+' over the cap of 70. Take points back or they are lost.']);e[1]=Math.min(70,e[1]+n)})}
 const savvyMax=()=>3+(S.folk==='Human'?1:0);
 const roSkillKeys=()=>[...Object.values(CAT).flat(),...(S.career==='Spellweaver'?BINDS.map(b=>'Bind: '+b):[])];
@@ -1133,7 +1131,7 @@ function nameSet(male){const sexK=male?'m':S.sex==='Female'?'w':S.sex==='Male'?'
  return{given:g.split('+').map(x=>x+sexK).join('+'),cult,clan:cl}}
 const pickReal=key=>{const l=key.split('+').flatMap(nl);return l[rnd(l.length)-1]};
 function rollPart(key,cult){if(rnd(2)===1)return pickReal(key);const w=invent(key);if(!w)return pickReal(key);return accOn()?accent(w,cult):w}
-const canName=()=>true;const elder=()=>S.folk!=='Human';
+const elder=()=>S.folk!=='Human';
 /* Patronymics: the father's given name plus -sen (son) or -dedt (daughter, Ivinian). Standard for the Ivinians of Orbaal; an option for the Jarin of Orbaal and anyone with an Ivinian family. */
 const ivNative=()=>orbP()==='Ivinian'||(S.nation==='ivinia'&&!elder());
 const patroAllowed=()=>!elder()&&!thrall()&&(S.nation==='orbaal'||S.nation==='ivinia'||S.dual==='ivinia'||orbIvFamily());const patroOn=()=>patroAllowed()&&(S.patro===null?ivNative():!!S.patro);
@@ -1183,6 +1181,8 @@ function fullName(){const s=nameSet();if(!S.clan&&!elder())rollClan();if(patroOn
 const byOn=()=>S.byOn===null?(!S.clan&&!patronymic()):!!S.byOn;
 const givenName=()=>S.given||'';
 const everyday=()=>{const g=givenName();if(!g)return'';return byOn()&&S.byname?g+' '+S.byname:g+nameTail()};
+/* With a name written by hand, the byname line is hidden and the given name and byname show as "Also known as" (sheet, .md and PDF page 3). */
+const aka=()=>S.nameHand&&byOn()&&S.byname?(givenName()?givenName()+' ':'')+S.byname:'';
 const formalName=()=>!S.nameHand&&byOn()&&S.byname&&(S.clan&&!elder()||patronymic())?givenName()+nameTail():'';
 function nameEdit(fn){fn()}
 /* The name in the rail is built from the parts, unless the player writes the whole name themselves. */
@@ -1256,7 +1256,8 @@ function expand(spec){return spec.split('|').flatMap(t=>t==='*Combat'?CAT.Combat
 function optionsFor(e){return expand(S.career==='Spellweaver'&&e.sw?e.sw:S.career==='Godbound'&&e.gb?e.gb:e.std)}
 const lifeEv=t=>S.life[t]?LIFE[t].find(e=>e.lo===S.life[t].lo):null;
 function lifeGrants(){const out=[];LIFET.forEach(([t])=>{const l=S.life[t];if(l&&l.pick)l.pick.split('+').forEach(g=>out.push(g))});return out}
-function unfit(e){if(e.tag==='noble'&&S.cls&&S.cls!=='noble')return'need noble birth';if(e.tag==='free'&&(S.cls==='slave'||S.cls==='serf'))return'need a free family';return''}
+function unfit(e){if(e.tag==='noble'&&S.cls&&S.cls!=='noble')return'need noble birth';if(e.tag==='free'&&UNFREE.includes(S.cls))return'need a free family';return''}
+/* What an origin event says about parentage. The life tables also tag these events "orphan" or "bastard" (from the tagging pass), but the code goes by this list, which says more (fostered or living alone). */
 const IMPLIED={'Tied to the Streets':'Orphan; fostered','Orphan of War':'Orphan; fostered','Shipwrecked':'Orphan; living alone','Found Family':'Fostered with another family','Wild Child':'Orphan; fostered','Home of Ill Repute':'Orphan; fostered','Bastard of High Blood':'Bastard; unacknowledged'};
 function parentClash(){const e=lifeEv('origin');if(!e||!IMPLIED[e.name])return'';const imp=IMPLIED[e.name];const ok=imp.startsWith('Bastard')?S.parent.startsWith('Bastard'):/^(Orphan|Fostered|Adopted)/.test(S.parent);return ok?'':imp}
 function afterOrigin(){const e=lifeEv('origin');if(e&&IMPLIED[e.name]&&!S.parent)S.parent=IMPLIED[e.name]}
@@ -1300,7 +1301,7 @@ const SIGNINFO={Ulandus:['the Tree','patient, confident and calm','aloof, inflex
 function activeSign(){if(!S.birth)return'';const p=signPair(S.birth);return p.other&&S.cuspPick===p.other?p.other:p.main}
 function travelMod(){let m=0;const parts=[];const add=(v,l)=>{if(v){m+=v;parts.push((v>0?'+':'−')+Math.abs(v)+' '+l)}};
  add(S.folk==='Sindarin'?4:S.folk==='Khuzdul'?2:0,S.folk);add(S.age==='Young'?-2:S.age==='Old'?2:0,S.age.toLowerCase());
- add(S.cls==='noble'?3:(S.cls==='slave'||S.cls==='serf')?-4:S.cls?-1:0,S.cls==='noble'?'noble':(S.cls==='slave'||S.cls==='serf')?'unfree':'free');
+ add(S.cls==='noble'?3:UNFREE.includes(S.cls)?-4:S.cls?-1:0,S.cls==='noble'?'noble':UNFREE.includes(S.cls)?'unfree':'free');
  const e=env();add(e==='City'?1:e?-2:0,e.toLowerCase());
  const o=S.occ;add(/Seaman|Pilot/.test(o)?5:/Hunter|Mercantyler|Mercenary|Teamster/.test(o)?2:0,'family trade');return{m,parts}}
 
@@ -1351,7 +1352,7 @@ const R={
 };
 ['abilRest','careerAll','roAll'].forEach(k=>{const f=R[k];R[k]=function(){f.apply(R,arguments);fillSubs()}});
 function rollAll(){rollAll0();if(S.career==='Godbound'&&issues()[6].length)S.role='lay';fillSubs()}
-function rollAll0(){const st=S.step;S=blank();S.step=st;const folks=['Human'];S.folk='Human';R.sex();R.b30();S.career=CAREERS[rnd(CAREERS.length)-1];if(S.career==='Godbound'){const ds=Object.keys(FAITH);S.deity=ds[rnd(ds.length)-1];const rs=Object.keys(ROLES).filter(r=>r==='lay'||FAITH[S.deity][r]);S.role=rs[rnd(rs.length)-1]}R.nation();R.cls();if(S.nation==='orbaal')R.people();R.clan();S.wealth=rnd(3)-1;S.bg=suggestBg();R.picks();
+function rollAll0(){const st=S.step;S=blank();S.step=st;S.folk='Human';R.sex();R.b30();S.career=CAREERS[rnd(CAREERS.length)-1];if(S.career==='Godbound'){const ds=Object.keys(FAITH);S.deity=ds[rnd(ds.length)-1];const rs=Object.keys(ROLES).filter(r=>r==='lay'||FAITH[S.deity][r]);S.role=rs[rnd(rs.length)-1]}R.nation();R.cls();if(S.nation==='orbaal')R.people();R.clan();S.wealth=rnd(3)-1;S.bg=suggestBg();R.picks();
  if(rnd(100)<=15){const o=NATIONS.filter(n=>!['other','evael',S.nation].includes(n.id));S.dual=o[rnd(o.length)-1].id;if(S.dual==='tribal')S.dualTribe=pickW(NAT.tribal.places).name}
  else if(rnd(100)<=50){const nl=langOf(S.nation,S.cls,S.folk);const o=LANGS.filter(l=>l!==nl&&l!=='Sindarin');S.lang2=otherL()||o[rnd(o.length)-1]}
  if(S.bg==='wanderer')S.lang40='Jarin';S.age=['Young','Adult','Adult','Old'][rnd(4)-1];R.years();R.birth();R.sibs();R.parent();R.standing();R.travel();R.allies();R.abil();R.abilRest();LIFET.forEach(([t])=>{R.life(t);const o=optionsFor(lifeEv(t));S.life[t].pick=o[rnd(o.length)-1]});R.careerAll();R.roAll();R.atAll();R.gearAll();rollLook('');{const k=Object.keys(TRAITS).concat(signWords());const n=1+rnd(2);while(S.traits.length<n){const t=k[rnd(k.length)-1];if(!S.traits.includes(t))S.traits.push(t)}}}
@@ -1366,7 +1367,6 @@ const titled=n=>{const t=(S.title||'').trim();return t&&n?t+' '+n:n};
 /* Knighted: nobles only. Ticked by default for a Warrior whose specialty is Knight; S.knighted holds the player's own choice. Knighted at 21, or this year if 20 or 21. */
 const knighted=()=>S.cls==='noble'&&(typeof S.knighted==='boolean'?S.knighted:S.career==='Warrior'&&S.occ2==='Knight');
 const knightYear=()=>{if(!ageSettled())return'';const a=ageYears();return yearTxt(a<=21?GM.y:(S.birth?birthYear():GM.y-a)+21)};
-const knightTxt=()=>knighted()?'Knighted'+(knightYear()?' '+knightYear():''):'';
 /* "Ulânkh (mendicant) or Aperâni (temple master)" gives Ulânkh and Aperâni. */
 const splitTitles=t=>t.replace(/\s*\([^)]*\)/g,'').split(/,\s*|\s+or\s+/).map(x=>x.trim()).filter(Boolean);
 function titleSugs(){const o=[],add=(...x)=>x.forEach(t=>{if(t&&!o.includes(t))o.push(t)});const f=S.sex==='Female',nb=S.sex==='Neither';
@@ -1409,7 +1409,7 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
   ${n&&S.place&&!tribal?`<div class="field"><div class="lab"><b>Born where, exactly?</b></div><div class="chips">${chip('A village near '+S.place,!S.inSet,'inSet','0','90%')}${chip('In '+S.place+' itself',S.inSet,'inSet','1','10%')}</div></div>`:''}
   ${S.nation==='ivinia'?`<p class="note">${STIGMA_IVINIA}</p>`:''}
   ${S.nation==='orbaal'?`<div class="field"><div class="lab"><span><b>People</b> <span class="hint">Orbaal has two: the Ivinian conquerors and the Jarin they rule.</span></span>${rollBtn('people','Roll d100')}</div><div class="chips">${chip('Orbaalese Ivinian',S.people==='Ivinian','people','Ivinian')}${chip('Jarin',S.people==='Jarin','people','Jarin')}</div>${S.people?`<span class="hint">${S.people==='Ivinian'?ivTongue():S.people} is your native tongue, and ${otherL()} the usual second. If your parents were one of each, choose the people you count as here, then "Between two cultures" on the Tongues tab.</span>`:''}</div>
-  ${S.people==='Ivinian'?`${['serf','slave'].includes(S.cls)?`<p class="note">An Ivinian ${CLASSES[S.cls].toLowerCase()} is rare: a captive brought from Ivinia, perhaps, or taken from a clan that lost. Say how it happened in your backstory.</p>`:''}`:''}
+  ${S.people==='Ivinian'?`${UNFREE.includes(S.cls)?`<p class="note">An Ivinian ${CLASSES[S.cls].toLowerCase()} is rare: a captive brought from Ivinia, perhaps, or taken from a clan that lost. Say how it happened in your backstory.</p>`:''}`:''}
   ${S.people==='Jarin'?`<p class="note">${STIGMA_JARIN}</p>`:''}`:''}
   ${n&&S.place?clanField():''}
   ${n&&S.place?fatherField():''}
@@ -1422,7 +1422,7 @@ function panel(){const I=issues();const warn=(I[S.step]||[]).map(m=>`<div class=
   ${S.cls&&(S.cls in w)?`<div class="field"><div class="lab"><label for="occ"><b>${thrall()?'Your masters\' occupation':'Parent\'s occupation'}</b></label>${rollBtn('occ','Roll d100')}</div><select id="occ" data-set="occ"><option value="">Choose…</option>${ol.map(x=>`<option ${S.occ===x.name?'selected':''}>${x.name}</option>`).join('')}</select>${ivClan()&&S.ivc==='great'?'<span class="hint">Many greatclan folk work more than one trade: farming in spring and autumn, trading or raiding in summer. The GM may let you roll a second.</span>':''}${o?`<span class="hint">${o.urban}% of ${o.name.toLowerCase()} households live in towns.</span>`:''}</div>`:''}
   ${S.cls&&S.cls!=='slave'&&(S.cls in w)?`<div class="field"><div class="lab"><b>Family wealth</b></div><div class="chips">${['Poor','Average','Rich'].map((l,i)=>chip(l,S.wealth===i,'wealth',i,WEALTH[S.cls][i]+'d')).join('')}</div></div>`:''}
   ${S.cls?`<div class="result">Starting Status: <b>${STATUS[S.cls]}</b> (proposed) · Coin: <b>${S.cls==='slave'?'none':WEALTH[S.cls][S.wealth]+'d'}</b></div>`:''}
-  ${thrall()?'<p class="note">A thrall is the property of the clan, not a member of it. Thralls usually work at their masters\' trades, take no patronymic, and are named as “thrall of clan” their owners.</p>':''}${orbP()==='Jarin'?`<p class="note">${STIGMA_JARIN}</p>`:orbP()==='Ivinian'&&['serf','slave'].includes(S.cls)?`<p class="note">An Ivinian ${CLASSES[S.cls].toLowerCase()} is rare. Say how it happened in your backstory.</p>`:''}`}`}
+  ${thrall()?'<p class="note">A thrall is the property of the clan, not a member of it. Thralls usually work at their masters\' trades, take no patronymic, and are named as “thrall of clan” their owners.</p>':''}${orbP()==='Jarin'?`<p class="note">${STIGMA_JARIN}</p>`:orbP()==='Ivinian'&&UNFREE.includes(S.cls)?`<p class="note">An Ivinian ${CLASSES[S.cls].toLowerCase()} is rare. Say how it happened in your backstory.</p>`:''}`}`}
  if(S.step===3){const sg=suggestBg();const b=BG[S.bg];
   h=`<header><h2>Upbringing</h2><p>The Background from the Broken Empires rules. Your birthplace and station suggest one, but the choice is yours.</p></header>${warn}
   <div class="cards">${Object.entries(BG).map(([k,v])=>`<button class="card" aria-pressed="${S.bg===k}" data-act="bg" data-val="${k}">${sg===k?'<span class="tag">Suggested by your origin</span>':''}<h3>${v.name}</h3><span>${v.blurb}</span></button>`).join('')}</div>
@@ -1517,7 +1517,7 @@ function steps(){const I=issues();const bad=i=>(I[i]||[]).length>0;const cur=pha
  $('#steps').innerHTML=`<div class="phases" role="tablist">${PHASES.map(([n,,sh],k)=>{const st=phaseSteps(k),d=st.filter(i=>done(i)&&!bad(i)).length,b=st.filter(bad).length;return`<button type="button" class="phase" role="tab" aria-selected="${k===vp}" data-act="phase" data-val="${k}" aria-label="${n}"><span class="pfull">${n}</span><span class="pshort">${sh}</span> <span class="cnt ${b?'bad':d===st.length?'ok':'warn'}">${d} of ${st.length}${b?' · '+b+' to fix':''}</span></button>`}).join('')}</div>
  <div class="steps">${phaseSteps(vp).map(i=>{const now=S.step===i;const m=bad(i)?'bad':now?'now':done(i)?'done':'';return`<button class="step" data-act="go" data-val="${i}" ${now?'aria-current="step"':''}><span class="mark ${m}" title="${bad(i)?'Needs another look':done(i)?'Complete':'Not finished'}"></span>${STEPS[i]}${bad(i)?'<span class="sr"> (needs another look)</span>':''}</button>`}).join('')}</div>`}
 function sheet(){const c=culture();const o=occ();const t=tongues();const {led,ex}=ledger();const e='<span class="empty">not chosen</span>';
- const id=`<dl>${S.concept?`<dt>Concept</dt><dd>${esc(S.concept)}</dd>`:''}${S.career?`<dt>Career</dt><dd>${careerLine()}</dd>`:''}<dt>Folk</dt><dd>${S.folk}${S.sex?', '+genderTxt():''}${orbP()?', '+orbP():''}</dd><dt>Born</dt><dd>${S.place?(S.nation==='tribal'?'Among the '+S.place:(S.inSet?S.place:'A village near '+S.place)+', '+NAT[S.nation].name):e}</dd>${ivK()?`<dt>Kingdom</dt><dd>${kingLabel(S.place)}</dd>`:''}${S.clan?`<dt>Clan</dt><dd>${esc(S.clan)}${thrall()?' <span class="empty">(owned by, not a member)</span>':''}</dd>`:''}${byOn()&&S.byname?`<dt>Byname</dt><dd>${esc(S.byname)}</dd>`:''}${(S.cover||'').trim()?`<dt>Cover name</dt><dd>${esc(S.cover)}</dd>`:''}${patroOn()&&S.father?`<dt>Father</dt><dd>${esc(S.father)} <span class="empty">(${esc(patronymic())})</span></dd>`:''}<dt>Society</dt><dd>${c||e}</dd><dt>Class</dt><dd>${S.cls?clsName():e}</dd><dt>Family trade</dt><dd>${S.occ||e}</dd><dt>Upbringing</dt><dd>${S.bg?BG[S.bg].name:e}</dd><dt>Status</dt><dd>${S.cls?statusVal():e}</dd>${knighted()?`<dt>Knighted</dt><dd>${knightYear()||'Yes'}</dd>`:''}<dt>Coin</dt><dd>${S.cls?coinText():e}</dd></dl>`;
+ const id=`<dl>${S.concept?`<dt>Concept</dt><dd>${esc(S.concept)}</dd>`:''}${S.career?`<dt>Career</dt><dd>${careerLine()}</dd>`:''}<dt>Folk</dt><dd>${S.folk}${S.sex?', '+genderTxt():''}${orbP()?', '+orbP():''}</dd><dt>Born</dt><dd>${S.place?(S.nation==='tribal'?'Among the '+S.place:(S.inSet?S.place:'A village near '+S.place)+', '+NAT[S.nation].name):e}</dd>${ivK()?`<dt>Kingdom</dt><dd>${kingLabel(S.place)}</dd>`:''}${S.clan?`<dt>Clan</dt><dd>${esc(S.clan)}${thrall()?' <span class="empty">(owned by, not a member)</span>':''}</dd>`:''}${byOn()&&S.byname&&!S.nameHand?`<dt>Byname</dt><dd>${esc(S.byname)}</dd>`:''}${aka()?`<dt>Also known as</dt><dd>${esc(aka())}</dd>`:''}${(S.cover||'').trim()?`<dt>Cover name</dt><dd>${esc(S.cover)}</dd>`:''}${patroOn()&&S.father?`<dt>Father</dt><dd>${esc(S.father)} <span class="empty">(${esc(patronymic())})</span></dd>`:''}<dt>Society</dt><dd>${c||e}</dd><dt>Class</dt><dd>${S.cls?clsName():e}</dd><dt>Family trade</dt><dd>${S.occ||e}</dd><dt>Upbringing</dt><dd>${S.bg?BG[S.bg].name:e}</dd><dt>Status</dt><dd>${S.cls?statusVal():e}</dd>${knighted()?`<dt>Knighted</dt><dd>${knightYear()||'Yes'}</dd>`:''}<dt>Coin</dt><dd>${S.cls?coinText():e}</dd></dl>`;
  const lang=`<div class="sec"><h3>Tongues and lore</h3><div class="rows stripe">${t.L.length?t.L.concat(t.W).map(l=>`<div class="row"><span>${l[0]} ${l[2]?`<small>${l[2]}</small>`:''}</span><span>${l[1]}</span></div>`).join(''):e}</div>${S.dual?`<p class="note">${tribalFamily()&&S.nation!=='tribal'?'Tribal family. Expect prejudice in the kingdoms, and little hope of rank above the unguilded.':orbMixed()?'Of both peoples of Orbaal.':'Family from elsewhere. Rank above guildsman is rare.'}</p>`:''}${orbP()==='Jarin'?'<p class="note">Jarin in Orbaal. Rank above guildsman is rare there.</p>':''}</div>`;
  const tl=talentCounts();const A=attrs();
  const atr=`<div class="sec"><h3>Attributes ${atLeft()?`<span class="cnt ${atLeft()<0?'bad':'warn'}">${atLeft()<0?(-atLeft())+' over':atLeft()+' points to spend'}</span>`:''}</h3><div class="rows stripe">${[A.res,A.init,A.tough,A.dt,A.ll,A.inv].map(x=>`<div class="row" title="${atBreak(x)}"><span>${x.name}${x.parts.length>1?` <small>${atBreak(x)}</small>`:''}</span><span>${x.name==='Initiative'?'+':''}${x.val}</span></div>`).join('')}</div></div>`;
@@ -1554,7 +1554,7 @@ function loadSaved(){try{const d=JSON.parse(localStorage.getItem(STOREKEY)||'nul
 /* Turn a saved character into the working one, with the upgrades for characters saved by older versions (romance notes, the Orbaal family tongue, the name, the Spellweaver path). Used wherever a saved character is opened, downloaded or checked, so they all agree. */
 function useSaved(saved,name){foldRom(saved);S=Object.assign(blank(),JSON.parse(JSON.stringify(saved)));if(!('orbLang' in saved))S.orbLang='Ivinian';if(!S.nameV)migrateName(name);fixSw()}
 function openChar(id){const e=CHARS.find(c=>c.id===id);if(!e)return false;useSaved(e.S,e.name);$('#name').value=currentName();CUR=id;VIEW='char';viewPhase=null;pendingDel=null;return true}
-function addChar(roll){S=blank();S.step=ORDER[0];if(roll)rollAll();const id=newId();S.nameV=2;const nm=roll&&canName()?fullName():'';CHARS.unshift({id,name:nm,S:JSON.parse(JSON.stringify(S)),saved:Date.now(),sum:null});$('#name').value=nm;CUR=id;VIEW='char';viewPhase=null;pendingDel=null}
+function addChar(roll){S=blank();S.step=ORDER[0];if(roll)rollAll();const id=newId();S.nameV=2;const nm=roll?fullName():'';CHARS.unshift({id,name:nm,S:JSON.parse(JSON.stringify(S)),saved:Date.now(),sum:null});$('#name').value=nm;CUR=id;VIEW='char';viewPhase=null;pendingDel=null}
 /* Duplicate a character, portrait and all. The list shows "(copy)" after the copy's name until it is renamed; the label never reaches the sheet or the files. If storage is full the copy is dropped and dupMsg says why. */
 let dupMsg=null;
 const copyLabel=c=>c.copy?(c.copy.n>1?' (copy '+c.copy.n+')':' (copy)'):'';
@@ -1592,7 +1592,7 @@ function charMd(name){const L=[];const nc='Not chosen yet';const c=culture();con
  if(S.birth||place)L.push('Born '+[S.birth?S.birth.d+' '+monthName(S.birth.m)+(ageSettled()?' '+yearTxt(birthYear()):'')+' ('+sunsign(S.birth)+')':'',place].filter(Boolean).join(', '));
  if(S.concept)L.push('','> '+S.concept);
  L.push('','## Origin');
- [...(ivK()?[['Kingdom',kingLabel(S.place)]]:[]),...(byOn()&&S.byname?[['Byname',S.byname]]:[]),...((S.cover||'').trim()?[['Cover name',S.cover]]:[]),['Clan',S.clan+(S.clan&&thrall()?' (owned by, not a member)':'')],...(patroOn()&&S.father?[['Father',S.father+' ('+patronymic()+')']]:[]),['Society',c],['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?statusVal():''],['Knighted',knighted()?unesc(knightYear())||'Yes':''],['Coin',S.cls?unesc(coinText()):''],
+ [...(ivK()?[['Kingdom',kingLabel(S.place)]]:[]),...(byOn()&&S.byname&&!S.nameHand?[['Byname',S.byname]]:[]),...(aka()?[['Also known as',aka()]]:[]),...((S.cover||'').trim()?[['Cover name',S.cover]]:[]),['Clan',S.clan+(S.clan&&thrall()?' (owned by, not a member)':'')],...(patroOn()&&S.father?[['Father',S.father+' ('+patronymic()+')']]:[]),['Society',c],['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?statusVal():''],['Knighted',knighted()?unesc(knightYear())||'Yes':''],['Coin',S.cls?unesc(coinText()):''],
   ['Family',[S.sibs?(S.sibs.n===1?'Only child':ord(S.sibs.rank)+' of '+S.sibs.n):'',S.parent,S.standing?S.standing+' in the clan':''].filter(Boolean).join(' · ')],['Travelled',S.travel?unesc(travelOut().label):''],['People',S.allies||(S.ownRel||[]).length?(allyList().join(' · ')||'None'):'']].forEach(([k,v])=>L.push('- **'+k+':** '+(v===''||v===null||v===undefined?nc:v)));
  {const rn=relNotes();if(rn.length){L.push('','## Notes on people');rn.forEach(([w,n])=>L.push('- **'+w+':** '+n))}}
  L.push('','## Appearance');{const lr=lookRows();if(lr.length)lr.forEach(([k,v])=>L.push('- **'+k+':** '+v));else L.push(nc)}
@@ -1679,7 +1679,7 @@ function page3Data(){const c=culture();const t=tongues();const R=[];const has=v=
  const sec=(h,rows,kind)=>{rows=rows.filter(r=>has(r[1]));if(rows.length)R.push({h,rows,kind:kind||'label'})};
  const place=S.place?(S.nation==='tribal'?'Among the '+S.place:(S.inSet?S.place:'A village near '+S.place)+', '+NAT[S.nation].name):'';
  sec('Origin',[['Formal name',formalName()],['Folk',S.folk+(S.sex?', '+genderTxt():'')+(orbP()?', '+orbP():'')],['Born',place],['Kingdom',ivK()?kingLabel(S.place):''],['Society',c],
-  ['Clan',S.clan?S.clan+(thrall()?' (owned by, not a member)':''):''],['Father',patroOn()&&S.father?S.father+' ('+patronymic()+')':''],['Byname',byOn()&&S.byname&&!S.nameHand?S.byname:''],['Cover name',(S.cover||'').trim()]]);
+  ['Clan',S.clan?S.clan+(thrall()?' (owned by, not a member)':''):''],['Father',patroOn()&&S.father?S.father+' ('+patronymic()+')':''],['Byname',byOn()&&S.byname&&!S.nameHand?S.byname:''],['Also known as',aka()],['Cover name',(S.cover||'').trim()]]);
  sec('Appearance',lookRows());
  sec('Station and upbringing',[['Class',S.cls?clsName():''],['Family trade',S.occ],['Upbringing',S.bg?BG[S.bg].name:''],['Status',S.cls?String(statusVal()):''],['Knighted',knighted()?unesc(knightYear())||'Yes':'']]);
  const sg=activeSign(),k=sg?SIGNSK[sg]:[],af=signAff(),ss=S.birth?sunsign(S.birth):'';
